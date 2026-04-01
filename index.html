@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SNAKE — Mino</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --lime:    #92ED11;
+      --black:   #171915;
+      --gray:    #6b6e69;
+      --white:   #eaeaea;
+      --dark:    #1f221d;
+      --border:  #2a2d28;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Epilogue', sans-serif;
+      overflow: hidden;
+    }
+
+    /* ── LAYOUT ────────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100vh;
+      padding: 24px 32px;
+      gap: 20px;
+    }
+
+    /* ── HEADER ────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo img {
+      height: 36px;
+      width: auto;
+      display: block;
+    }
+
+    .tagline {
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 300;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gray);
+    }
+
+    /* ── MAIN AREA ─────────────────────────────── */
+    .main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+    }
+
+    /* ── SIDEBAR ───────────────────────────────── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 180px;
+    }
+
+    .card {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+    }
+
+    .card-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-family: 'Epilogue', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--lime);
+      line-height: 1;
+    }
+
+    .card-value.small {
+      font-size: 1.3rem;
+    }
+
+    .controls-card {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+    }
+
+    .controls-card .card-label { margin-bottom: 12px; }
+
+    .key-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      font-size: 0.75rem;
+      color: var(--gray);
+      font-weight: 300;
+    }
+
+    .key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border);
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--white);
+      background: #1a1a1a;
+      flex-shrink: 0;
+    }
+
+    .speed-indicator {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .speed-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--border);
+      transition: background 0.3s;
+    }
+
+    .speed-dot.active { background: var(--lime); }
+
+    /* ── CANVAS WRAPPER ────────────────────────── */
+    .canvas-wrap {
+      position: relative;
+      border: 1px solid var(--border);
+      line-height: 0;
+    }
+
+    .canvas-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border: 1px solid transparent;
+      pointer-events: none;
+      transition: border-color 0.3s;
+    }
+
+    .canvas-wrap.playing::before { border-color: var(--lime); }
+
+    canvas {
+      display: block;
+    }
+
+    /* ── OVERLAY ───────────────────────────────── */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(10,10,10,0.92);
+      text-align: center;
+      padding: 32px;
+      transition: opacity 0.4s;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .overlay-title {
+      font-family: 'Epilogue', sans-serif;
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .overlay-title span { color: var(--lime); }
+
+    .overlay-sub {
+      font-size: 0.8rem;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 32px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 32px;
+      background: var(--lime);
+      color: var(--black);
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.2s;
+    }
+
+    .btn:hover { transform: translateY(-2px); }
+    .btn:active { transform: translateY(0); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--lime);
+      border: 1px solid var(--lime);
+      margin-top: 10px;
+    }
+
+    .btn-ghost:hover { background: rgba(146,237,17,0.08); }
+
+    .score-result {
+      margin-bottom: 24px;
+      padding: 16px 28px;
+      border: 1px solid var(--border);
+    }
+
+    .score-result .label {
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 4px;
+    }
+
+    .score-result .val {
+      font-family: 'Epilogue', sans-serif;
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--lime);
+      line-height: 1;
+    }
+
+    .new-record {
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--lime);
+      margin-top: 6px;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+
+    .new-record.show { opacity: 1; }
+
+    /* ── FOOTER ────────────────────────────────── */
+    footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .footer-text {
+      font-size: 0.65rem;
+      font-weight: 300;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gray);
+    }
+
+    .footer-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--lime);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* ── FLASH ─────────────────────────────────── */
+    @keyframes flash {
+      0%   { opacity: 0.6; }
+      100% { opacity: 0; }
+    }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: var(--lime);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .flash.go {
+      animation: flash 0.15s ease-out forwards;
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo"><img src="LOGO_MINO_VERT.png" alt="Mino" /></div>
+    <div class="tagline">Crafting Connections — Shaping Experiences</div>
+  </header>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SIDEBAR LEFT -->
+    <div class="sidebar">
+      <div class="card">
+        <div class="card-label">Score</div>
+        <div class="card-value" id="scoreDisplay">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Record</div>
+        <div class="card-value small" id="bestDisplay">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Vitesse</div>
+        <div class="speed-indicator" id="speedDots">
+          <div class="speed-dot active"></div>
+          <div class="speed-dot"></div>
+          <div class="speed-dot"></div>
+          <div class="speed-dot"></div>
+          <div class="speed-dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CANVAS -->
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="gameCanvas"></canvas>
+      <div class="flash" id="flash"></div>
+
+      <!-- START OVERLAY -->
+      <div class="overlay" id="startOverlay">
+        <div class="overlay-title">SNA<span>KE</span></div>
+        <div class="overlay-sub">Un jeu classique réinventé</div>
+        <button class="btn" id="startBtn">Jouer →</button>
+      </div>
+
+      <!-- GAME OVER OVERLAY -->
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="overlay-title" style="font-size:1.8rem; margin-bottom:6px;">GAME<span> OVER</span></div>
+        <div class="overlay-sub">Le serpent a mordu</div>
+        <div class="score-result">
+          <div class="label">Score final</div>
+          <div class="val" id="finalScore">0</div>
+          <div class="new-record" id="newRecord">★ Nouveau record</div>
+        </div>
+        <button class="btn" id="restartBtn">Rejouer →</button>
+        <button class="btn btn-ghost" id="menuBtn">Menu</button>
+      </div>
+    </div>
+
+    <!-- SIDEBAR RIGHT -->
+    <div class="sidebar">
+      <div class="controls-card">
+        <div class="card-label">Contrôles</div>
+        <div class="key-row"><div class="key">↑</div> Haut</div>
+        <div class="key-row"><div class="key">↓</div> Bas</div>
+        <div class="key-row"><div class="key">←</div> Gauche</div>
+        <div class="key-row"><div class="key">→</div> Droite</div>
+        <div class="key-row" style="margin-top:10px;"><div class="key" style="width:auto;padding:0 6px;font-size:0.55rem;">SPC</div> Pause</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Longueur</div>
+        <div class="card-value small" id="lengthDisplay">3</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-text">© 2026 Mino Creative Studio</div>
+    <div class="footer-dot"></div>
+    <div class="footer-text">All rights reserved</div>
+  </footer>
+
+</div>
+
+<script>
+  // ── CONFIG ──────────────────────────────────────────────
+  const CELL       = 20;
+  const COLS       = 25;
+  const ROWS       = 25;
+  const W          = COLS * CELL;
+  const H          = ROWS * CELL;
+  const BASE_SPEED = 130;  // ms per tick at level 0
+  const SPEED_INC  = 10;   // ms faster per level
+  const LEVEL_STEP = 5;    // points per level
+
+  const LIME   = '#92ED11';
+  const BLACK  = '#171915';
+  const BORDER = '#2a2d28';
+
+  // ── DOM ─────────────────────────────────────────────────
+  const canvas    = document.getElementById('gameCanvas');
+  const ctx       = canvas.getContext('2d');
+  const wrap      = document.getElementById('canvasWrap');
+  const startOvl  = document.getElementById('startOverlay');
+  const gameOvl   = document.getElementById('gameOverOverlay');
+  const startBtn  = document.getElementById('startBtn');
+  const restBtn   = document.getElementById('restartBtn');
+  const menuBtn   = document.getElementById('menuBtn');
+  const scoreDsp  = document.getElementById('scoreDisplay');
+  const bestDsp   = document.getElementById('bestDisplay');
+  const finalScr  = document.getElementById('finalScore');
+  const lengthDsp = document.getElementById('lengthDisplay');
+  const newRec    = document.getElementById('newRecord');
+  const flashEl   = document.getElementById('flash');
+  const speedDots = document.getElementById('speedDots').querySelectorAll('.speed-dot');
+
+  canvas.width  = W;
+  canvas.height = H;
+
+  // ── STATE ────────────────────────────────────────────────
+  let snake, dir, nextDir, food, score, best;
+  let running  = false;
+  let paused   = false;
+  let rafId    = null;
+  let lastTick = 0;   // timestamp of last game tick
+
+  best = parseInt(localStorage.getItem('mino_snake_best') || '0', 10);
+  bestDsp.textContent = best;
+
+  // ── HELPERS ──────────────────────────────────────────────
+  function getInterval() {
+    const level = Math.floor(score / LEVEL_STEP);
+    return Math.max(50, BASE_SPEED - level * SPEED_INC);
+  }
+
+  function placeFood() {
+    let pos;
+    do {
+      pos = { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+    } while (snake.some(s => s.x === pos.x && s.y === pos.y));
+    food = pos;
+  }
+
+  function init() {
+    const cx = Math.floor(COLS / 2);
+    const cy = Math.floor(ROWS / 2);
+    snake   = [{x: cx, y: cy}, {x: cx-1, y: cy}, {x: cx-2, y: cy}];
+    dir     = {x: 1, y: 0};
+    nextDir = {x: 1, y: 0};
+    score   = 0;
+    paused  = false;
+    placeFood();
+    updateUI();
+  }
+
+  // ── TICK (game logic) ────────────────────────────────────
+  function tick() {
+    dir = { ...nextDir };
+    const head = {
+      x: (snake[0].x + dir.x + COLS) % COLS,
+      y: (snake[0].y + dir.y + ROWS) % ROWS
+    };
+
+    // Self collision → game over
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+      endGame();
+      return;
+    }
+
+    snake.unshift(head);
+
+    if (head.x === food.x && head.y === food.y) {
+      score++;
+      placeFood();
+      triggerFlash();
+    } else {
+      snake.pop();
+    }
+
+    updateUI();
+  }
+
+  // ── SINGLE RAF RENDER LOOP ───────────────────────────────
+  function renderLoop(timestamp) {
+    if (!running) return;
+
+    rafId = requestAnimationFrame(renderLoop);
+
+    if (!paused) {
+      // Advance game logic on interval
+      if (timestamp - lastTick >= getInterval()) {
+        lastTick = timestamp;
+        tick();
+        if (!running) return; // tick() may have called endGame()
+      }
+    }
+
+    draw(timestamp);
+  }
+
+  // ── DRAW ─────────────────────────────────────────────────
+  function draw(timestamp) {
+    const t = (timestamp || performance.now()) / 600;
+
+    // Background
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid
+    ctx.strokeStyle = BORDER;
+    ctx.lineWidth = 0.4;
+    for (let x = 0; x <= COLS; x++) {
+      ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, H); ctx.stroke();
+    }
+    for (let y = 0; y <= ROWS; y++) {
+      ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(W, y * CELL); ctx.stroke();
+    }
+
+    // Food — pulsing circle (driven by timestamp for smooth animation)
+    const pulse = 0.7 + 0.3 * Math.sin(t * Math.PI * 2);
+    const fr = (CELL / 2 - 3) * pulse;
+    const fx = food.x * CELL + CELL / 2;
+    const fy = food.y * CELL + CELL / 2;
+
+    const grd = ctx.createRadialGradient(fx, fy, 0, fx, fy, CELL);
+    grd.addColorStop(0, 'rgba(146,237,17,0.25)');
+    grd.addColorStop(1, 'rgba(146,237,17,0)');
+    ctx.beginPath(); ctx.arc(fx, fy, CELL, 0, Math.PI * 2);
+    ctx.fillStyle = grd; ctx.fill();
+
+    ctx.beginPath(); ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+    ctx.fillStyle = LIME; ctx.fill();
+
+    // Snake
+    const len = snake.length;
+    snake.forEach((seg, i) => {
+      const alpha = 1 - (i / len) * 0.55;
+      const px = seg.x * CELL + 1;
+      const py = seg.y * CELL + 1;
+      const sz = CELL - 2;
+
+      if (i === 0) {
+        // Head — full lime
+        ctx.fillStyle = LIME;
+        ctx.fillRect(px, py, sz, sz);
+
+        // Eyes — positioned based on direction
+        ctx.fillStyle = BLACK;
+        const e = 3;
+        if      (dir.x === 1)  { ctx.fillRect(px+sz-6, py+3, e, e); ctx.fillRect(px+sz-6, py+sz-6, e, e); }
+        else if (dir.x === -1) { ctx.fillRect(px+3,    py+3, e, e); ctx.fillRect(px+3,    py+sz-6, e, e); }
+        else if (dir.y === 1)  { ctx.fillRect(px+3,    py+sz-6, e, e); ctx.fillRect(px+sz-6, py+sz-6, e, e); }
+        else                   { ctx.fillRect(px+3,    py+3, e, e); ctx.fillRect(px+sz-6, py+3, e, e); }
+      } else {
+        // Body — fades toward tail
+        ctx.fillStyle = `rgba(146,237,17,${alpha.toFixed(2)})`;
+        const pad = Math.min(Math.round((i / len) * 3), 3);
+        ctx.fillRect(px + pad, py + pad, sz - pad * 2, sz - pad * 2);
+      }
+    });
+  }
+
+  // ── UI ────────────────────────────────────────────────────
+  function updateUI() {
+    scoreDsp.textContent = score;
+    lengthDsp.textContent = snake.length;
+    const level = Math.floor(score / LEVEL_STEP);
+    speedDots.forEach((dot, i) => dot.classList.toggle('active', i <= Math.min(level, 4)));
+  }
+
+  function triggerFlash() {
+    flashEl.classList.remove('go');
+    void flashEl.offsetWidth;
+    flashEl.classList.add('go');
+  }
+
+  // ── FLOW ──────────────────────────────────────────────────
+  function startGame() {
+    if (rafId) cancelAnimationFrame(rafId);
+    init();
+    running  = true;
+    lastTick = 0;
+    startOvl.classList.add('hidden');
+    gameOvl.classList.add('hidden');
+    wrap.classList.add('playing');
+    rafId = requestAnimationFrame(renderLoop);
+  }
+
+  function endGame() {
+    running = false;
+    cancelAnimationFrame(rafId);
+    rafId = null;
+    wrap.classList.remove('playing');
+
+    const isNew = score > best;
+    if (isNew) {
+      best = score;
+      localStorage.setItem('mino_snake_best', best);
+      bestDsp.textContent = best;
+    }
+
+    finalScr.textContent = score;
+    newRec.classList.toggle('show', isNew);
+    gameOvl.classList.remove('hidden');
+  }
+
+  function showMenu() {
+    running = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    wrap.classList.remove('playing');
+    gameOvl.classList.add('hidden');
+    startOvl.classList.remove('hidden');
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function togglePause() {
+    if (!running) return;
+    paused = !paused;
+    if (!paused) {
+      lastTick = performance.now(); // reset tick timer so no instant skip
+    }
+  }
+
+  // ── INPUT ────────────────────────────────────────────────
+  const DIR_MAP = {
+    ArrowUp:    {x: 0, y: -1}, ArrowDown:  {x: 0, y: 1},
+    ArrowLeft:  {x: -1, y: 0}, ArrowRight: {x: 1, y: 0},
+    w: {x: 0, y: -1}, s: {x: 0, y: 1},
+    a: {x: -1, y: 0}, d: {x: 1, y: 0},
+  };
+
+  document.addEventListener('keydown', e => {
+    if (e.key === ' ') { e.preventDefault(); togglePause(); return; }
+    const d = DIR_MAP[e.key];
+    if (!d) return;
+    e.preventDefault();
+    if (d.x !== -dir.x || d.y !== -dir.y) nextDir = d;
+  });
+
+  // Touch swipe
+  let touchStart = null;
+  canvas.addEventListener('touchstart', e => {
+    touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, {passive: true});
+
+  canvas.addEventListener('touchend', e => {
+    if (!touchStart) return;
+    const dx = e.changedTouches[0].clientX - touchStart.x;
+    const dy = e.changedTouches[0].clientY - touchStart.y;
+    touchStart = null;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      const d = dx > 0 ? {x:1,y:0} : {x:-1,y:0};
+      if (d.x !== -dir.x) nextDir = d;
+    } else {
+      const d = dy > 0 ? {x:0,y:1} : {x:0,y:-1};
+      if (d.y !== -dir.y) nextDir = d;
+    }
+  }, {passive: true});
+
+  startBtn.addEventListener('click', startGame);
+  restBtn.addEventListener('click', startGame);
+  menuBtn.addEventListener('click', showMenu);
+
+  // ── INIT CANVAS ──────────────────────────────────────────
+  ctx.fillStyle = BLACK;
+  ctx.fillRect(0, 0, W, H);
+</script>
+</body>
+</html>
