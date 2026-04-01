@@ -11,12 +11,12 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --lime:    #92ED11;
-      --black:   #171915;
-      --gray:    #6b6e69;
-      --white:   #eaeaea;
-      --dark:    #1f221d;
-      --border:  #2a2d28;
+      --lime:   #92ED11;
+      --black:  #171915;
+      --gray:   #6b6e69;
+      --white:  #eaeaea;
+      --dark:   #1f221d;
+      --border: #2a2d28;
     }
 
     html, body {
@@ -27,7 +27,6 @@
       overflow: hidden;
     }
 
-    /* ── LAYOUT ────────────────────────────────── */
     .layout {
       display: grid;
       grid-template-rows: auto 1fr auto;
@@ -36,21 +35,16 @@
       gap: 20px;
     }
 
-    /* ── HEADER ────────────────────────────────── */
+    /* ── HEADER ─────────────────────────────── */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
 
-    .logo img {
-      height: 36px;
-      width: auto;
-      display: block;
-    }
+    .logo img { height: 36px; width: auto; display: block; }
 
     .tagline {
-      font-family: 'Epilogue', sans-serif;
       font-size: 0.72rem;
       font-weight: 300;
       letter-spacing: 0.25em;
@@ -58,7 +52,7 @@
       color: var(--gray);
     }
 
-    /* ── MAIN AREA ─────────────────────────────── */
+    /* ── MAIN ───────────────────────────────── */
     .main {
       display: flex;
       align-items: center;
@@ -66,7 +60,7 @@
       gap: 36px;
     }
 
-    /* ── SIDEBAR ───────────────────────────────── */
+    /* ── SIDEBARS ───────────────────────────── */
     .sidebar {
       display: flex;
       flex-direction: column;
@@ -97,59 +91,69 @@
       line-height: 1;
     }
 
-    .card-value.small {
-      font-size: 1.3rem;
-    }
+    .card-value.small { font-size: 1.3rem; }
 
-    .controls-card {
+    .speed-indicator { display: flex; gap: 4px; margin-top: 4px; }
+    .speed-dot { width: 6px; height: 6px; background: var(--border); transition: background 0.3s; }
+    .speed-dot.active { background: var(--lime); }
+
+    /* ── LEADERBOARD ────────────────────────── */
+    .lb-card {
       background: var(--dark);
       border: 1px solid var(--border);
       padding: 18px 20px;
+      flex: 1;
     }
 
-    .controls-card .card-label { margin-bottom: 12px; }
-
-    .key-row {
+    .lb-row {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 7px;
-      font-size: 0.75rem;
-      color: var(--gray);
-      font-weight: 300;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+      transition: color 0.2s;
     }
 
-    .key {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px;
-      height: 26px;
-      border: 1px solid var(--border);
-      font-family: 'Epilogue', sans-serif;
-      font-size: 0.65rem;
+    .lb-row:last-child { border-bottom: none; }
+
+    .lb-rank {
+      font-size: 0.6rem;
       font-weight: 700;
+      letter-spacing: 0.1em;
+      color: var(--gray);
+      width: 18px;
+    }
+
+    .lb-rank.gold   { color: #FFD700; }
+    .lb-rank.silver { color: #C0C0C0; }
+    .lb-rank.bronze { color: #CD7F32; }
+
+    .lb-name {
+      flex: 1;
+      padding: 0 8px;
+      font-weight: 400;
       color: var(--white);
-      background: #1a1a1a;
-      flex-shrink: 0;
+      font-size: 0.78rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
-    .speed-indicator {
-      display: flex;
-      gap: 4px;
-      margin-top: 4px;
+    .lb-row.current-player .lb-name { color: var(--lime); font-weight: 700; }
+
+    .lb-score {
+      font-family: 'Epilogue', sans-serif;
+      font-weight: 800;
+      font-size: 0.9rem;
+      color: var(--lime);
+      min-width: 28px;
+      text-align: right;
     }
 
-    .speed-dot {
-      width: 6px;
-      height: 6px;
-      background: var(--border);
-      transition: background 0.3s;
-    }
+    .lb-score.zero { color: var(--gray); font-weight: 400; }
 
-    .speed-dot.active { background: var(--lime); }
-
-    /* ── CANVAS WRAPPER ────────────────────────── */
+    /* ── CANVAS ─────────────────────────────── */
     .canvas-wrap {
       position: relative;
       border: 1px solid var(--border);
@@ -167,11 +171,9 @@
 
     .canvas-wrap.playing::before { border-color: var(--lime); }
 
-    canvas {
-      display: block;
-    }
+    canvas { display: block; }
 
-    /* ── OVERLAY ───────────────────────────────── */
+    /* ── OVERLAY ────────────────────────────── */
     .overlay {
       position: absolute;
       inset: 0;
@@ -179,16 +181,13 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: rgba(10,10,10,0.92);
+      background: rgba(10,10,10,0.94);
       text-align: center;
-      padding: 32px;
+      padding: 28px;
       transition: opacity 0.4s;
     }
 
-    .overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
 
     .overlay-title {
       font-family: 'Epilogue', sans-serif;
@@ -197,20 +196,61 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       line-height: 1;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     }
 
     .overlay-title span { color: var(--lime); }
 
     .overlay-sub {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       font-weight: 300;
       letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--gray);
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
 
+    /* ── PLAYER PICKER ──────────────────────── */
+    .player-label {
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 12px;
+    }
+
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 24px;
+      width: 100%;
+      max-width: 320px;
+    }
+
+    .player-btn {
+      padding: 10px 6px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--gray);
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+
+    .player-btn:hover { border-color: var(--lime); color: var(--white); }
+
+    .player-btn.selected {
+      background: var(--lime);
+      border-color: var(--lime);
+      color: var(--black);
+    }
+
+    /* ── BUTTONS ────────────────────────────── */
     .btn {
       display: inline-flex;
       align-items: center;
@@ -225,11 +265,12 @@
       text-transform: uppercase;
       border: none;
       cursor: pointer;
-      transition: transform 0.15s, background 0.2s;
+      transition: transform 0.15s, opacity 0.2s;
     }
 
-    .btn:hover { transform: translateY(-2px); }
+    .btn:hover:not(:disabled) { transform: translateY(-2px); }
     .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: 0.3; cursor: default; }
 
     .btn-ghost {
       background: transparent;
@@ -238,11 +279,11 @@
       margin-top: 10px;
     }
 
-    .btn-ghost:hover { background: rgba(146,237,17,0.08); }
+    .btn-ghost:hover:not(:disabled) { background: rgba(146,237,17,0.08); }
 
     .score-result {
-      margin-bottom: 24px;
-      padding: 16px 28px;
+      margin-bottom: 20px;
+      padding: 14px 28px;
       border: 1px solid var(--border);
     }
 
@@ -274,7 +315,7 @@
 
     .new-record.show { opacity: 1; }
 
-    /* ── FOOTER ────────────────────────────────── */
+    /* ── FOOTER ─────────────────────────────── */
     footer {
       display: flex;
       align-items: center;
@@ -292,8 +333,7 @@
     }
 
     .footer-dot {
-      width: 6px;
-      height: 6px;
+      width: 6px; height: 6px;
       background: var(--lime);
       border-radius: 50%;
       animation: pulse 2s infinite;
@@ -304,11 +344,8 @@
       50%       { opacity: 0.4; transform: scale(0.7); }
     }
 
-    /* ── FLASH ─────────────────────────────────── */
-    @keyframes flash {
-      0%   { opacity: 0.6; }
-      100% { opacity: 0; }
-    }
+    /* ── FLASH ──────────────────────────────── */
+    @keyframes flash { 0% { opacity: 0.5; } 100% { opacity: 0; } }
 
     .flash {
       position: absolute;
@@ -318,22 +355,18 @@
       opacity: 0;
     }
 
-    .flash.go {
-      animation: flash 0.15s ease-out forwards;
-    }
+    .flash.go { animation: flash 0.15s ease-out forwards; }
   </style>
 </head>
 <body>
 
 <div class="layout">
 
-  <!-- HEADER -->
   <header>
     <div class="logo"><img src="LOGO_MINO_VERT.png" alt="Mino" /></div>
     <div class="tagline">Crafting Connections — Shaping Experiences</div>
   </header>
 
-  <!-- MAIN -->
   <div class="main">
 
     <!-- SIDEBAR LEFT -->
@@ -356,6 +389,10 @@
           <div class="speed-dot"></div>
         </div>
       </div>
+      <div class="card">
+        <div class="card-label">Longueur</div>
+        <div class="card-value small" id="lengthDisplay">3</div>
+      </div>
     </div>
 
     <!-- CANVAS -->
@@ -366,14 +403,22 @@
       <!-- START OVERLAY -->
       <div class="overlay" id="startOverlay">
         <div class="overlay-title">SNA<span>KE</span></div>
-        <div class="overlay-sub">Un jeu classique réinventé</div>
-        <button class="btn" id="startBtn">Jouer →</button>
+        <div class="overlay-sub">Choisis ton joueur</div>
+        <div class="player-grid" id="playerGrid">
+          <button class="player-btn" data-name="Aminata">Aminata</button>
+          <button class="player-btn" data-name="Inès">Inès</button>
+          <button class="player-btn" data-name="Maé">Maé</button>
+          <button class="player-btn" data-name="Luna">Luna</button>
+          <button class="player-btn" data-name="Bastien">Bastien</button>
+          <button class="player-btn" data-name="Anatole">Anatole</button>
+        </div>
+        <button class="btn" id="startBtn" disabled>Jouer →</button>
       </div>
 
       <!-- GAME OVER OVERLAY -->
       <div class="overlay hidden" id="gameOverOverlay">
         <div class="overlay-title" style="font-size:1.8rem; margin-bottom:6px;">GAME<span> OVER</span></div>
-        <div class="overlay-sub">Le serpent a mordu</div>
+        <div class="overlay-sub" id="gameOverSub">Le serpent a mordu</div>
         <div class="score-result">
           <div class="label">Score final</div>
           <div class="val" id="finalScore">0</div>
@@ -384,25 +429,16 @@
       </div>
     </div>
 
-    <!-- SIDEBAR RIGHT -->
+    <!-- SIDEBAR RIGHT — LEADERBOARD -->
     <div class="sidebar">
-      <div class="controls-card">
-        <div class="card-label">Contrôles</div>
-        <div class="key-row"><div class="key">↑</div> Haut</div>
-        <div class="key-row"><div class="key">↓</div> Bas</div>
-        <div class="key-row"><div class="key">←</div> Gauche</div>
-        <div class="key-row"><div class="key">→</div> Droite</div>
-        <div class="key-row" style="margin-top:10px;"><div class="key" style="width:auto;padding:0 6px;font-size:0.55rem;">SPC</div> Pause</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Longueur</div>
-        <div class="card-value small" id="lengthDisplay">3</div>
+      <div class="lb-card">
+        <div class="card-label">Leaderboard</div>
+        <div id="lbList"></div>
       </div>
     </div>
 
   </div>
 
-  <!-- FOOTER -->
   <footer>
     <div class="footer-text">© 2026 Mino Creative Studio</div>
     <div class="footer-dot"></div>
@@ -418,45 +454,91 @@
   const ROWS       = 25;
   const W          = COLS * CELL;
   const H          = ROWS * CELL;
-  const BASE_SPEED = 130;  // ms per tick at level 0
-  const SPEED_INC  = 10;   // ms faster per level
-  const LEVEL_STEP = 5;    // points per level
+  const BASE_SPEED = 130;
+  const SPEED_INC  = 10;
+  const LEVEL_STEP = 5;
 
   const LIME   = '#92ED11';
   const BLACK  = '#171915';
   const BORDER = '#2a2d28';
 
+  const PLAYERS = ['Aminata', 'Inès', 'Maé', 'Luna', 'Bastien', 'Anatole'];
+
   // ── DOM ─────────────────────────────────────────────────
-  const canvas    = document.getElementById('gameCanvas');
-  const ctx       = canvas.getContext('2d');
-  const wrap      = document.getElementById('canvasWrap');
-  const startOvl  = document.getElementById('startOverlay');
-  const gameOvl   = document.getElementById('gameOverOverlay');
-  const startBtn  = document.getElementById('startBtn');
-  const restBtn   = document.getElementById('restartBtn');
-  const menuBtn   = document.getElementById('menuBtn');
-  const scoreDsp  = document.getElementById('scoreDisplay');
-  const bestDsp   = document.getElementById('bestDisplay');
-  const finalScr  = document.getElementById('finalScore');
-  const lengthDsp = document.getElementById('lengthDisplay');
-  const newRec    = document.getElementById('newRecord');
-  const flashEl   = document.getElementById('flash');
-  const speedDots = document.getElementById('speedDots').querySelectorAll('.speed-dot');
+  const canvas      = document.getElementById('gameCanvas');
+  const ctx         = canvas.getContext('2d');
+  const wrap        = document.getElementById('canvasWrap');
+  const startOvl    = document.getElementById('startOverlay');
+  const gameOvl     = document.getElementById('gameOverOverlay');
+  const startBtn    = document.getElementById('startBtn');
+  const restBtn     = document.getElementById('restartBtn');
+  const menuBtn     = document.getElementById('menuBtn');
+  const scoreDsp    = document.getElementById('scoreDisplay');
+  const bestDsp     = document.getElementById('bestDisplay');
+  const finalScr    = document.getElementById('finalScore');
+  const lengthDsp   = document.getElementById('lengthDisplay');
+  const newRec      = document.getElementById('newRecord');
+  const flashEl     = document.getElementById('flash');
+  const speedDots   = document.getElementById('speedDots').querySelectorAll('.speed-dot');
+  const lbList      = document.getElementById('lbList');
+  const gameOverSub = document.getElementById('gameOverSub');
 
   canvas.width  = W;
   canvas.height = H;
 
+  // ── LEADERBOARD STORAGE ──────────────────────────────────
+  function loadScores() {
+    try {
+      return JSON.parse(localStorage.getItem('mino_lb') || '{}');
+    } catch { return {}; }
+  }
+
+  function saveScore(name, score) {
+    const scores = loadScores();
+    if (!scores[name] || score > scores[name]) scores[name] = score;
+    localStorage.setItem('mino_lb', JSON.stringify(scores));
+  }
+
+  function renderLeaderboard(highlightName) {
+    const scores = loadScores();
+    const ranked = PLAYERS
+      .map(name => ({ name, score: scores[name] || 0 }))
+      .sort((a, b) => b.score - a.score);
+
+    const medals = ['gold', 'silver', 'bronze'];
+
+    lbList.innerHTML = ranked.map((p, i) => `
+      <div class="lb-row ${p.name === highlightName ? 'current-player' : ''}">
+        <span class="lb-rank ${medals[i] || ''}">${i + 1}</span>
+        <span class="lb-name">${p.name}</span>
+        <span class="lb-score ${p.score === 0 ? 'zero' : ''}">${p.score}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── PLAYER SELECTION ─────────────────────────────────────
+  let currentPlayer = null;
+
+  document.getElementById('playerGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.player-btn');
+    if (!btn) return;
+    document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    currentPlayer = btn.dataset.name;
+    startBtn.disabled = false;
+    renderLeaderboard(currentPlayer);
+    // Update personal best display
+    const scores = loadScores();
+    bestDsp.textContent = scores[currentPlayer] || 0;
+  });
+
   // ── STATE ────────────────────────────────────────────────
-  let snake, dir, nextDir, food, score, best;
+  let snake, dir, nextDir, food, score;
   let running  = false;
   let paused   = false;
   let rafId    = null;
-  let lastTick = 0;   // timestamp of last game tick
+  let lastTick = 0;
 
-  best = parseInt(localStorage.getItem('mino_snake_best') || '0', 10);
-  bestDsp.textContent = best;
-
-  // ── HELPERS ──────────────────────────────────────────────
   function getInterval() {
     const level = Math.floor(score / LEVEL_STEP);
     return Math.max(50, BASE_SPEED - level * SPEED_INC);
@@ -482,17 +564,20 @@
     updateUI();
   }
 
-  // ── TICK (game logic) ────────────────────────────────────
+  // ── TICK ─────────────────────────────────────────────────
   function tick() {
     dir = { ...nextDir };
-    const head = {
-      x: (snake[0].x + dir.x + COLS) % COLS,
-      y: (snake[0].y + dir.y + ROWS) % ROWS
-    };
+    const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+    // Wall collision → game over
+    if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
+      endGame('Mur touché !');
+      return;
+    }
 
     // Self collision → game over
     if (snake.some(s => s.x === head.x && s.y === head.y)) {
-      endGame();
+      endGame('Le serpent a mordu');
       return;
     }
 
@@ -509,21 +594,15 @@
     updateUI();
   }
 
-  // ── SINGLE RAF RENDER LOOP ───────────────────────────────
+  // ── RENDER LOOP ──────────────────────────────────────────
   function renderLoop(timestamp) {
     if (!running) return;
-
     rafId = requestAnimationFrame(renderLoop);
-
-    if (!paused) {
-      // Advance game logic on interval
-      if (timestamp - lastTick >= getInterval()) {
-        lastTick = timestamp;
-        tick();
-        if (!running) return; // tick() may have called endGame()
-      }
+    if (!paused && timestamp - lastTick >= getInterval()) {
+      lastTick = timestamp;
+      tick();
+      if (!running) return;
     }
-
     draw(timestamp);
   }
 
@@ -531,7 +610,6 @@
   function draw(timestamp) {
     const t = (timestamp || performance.now()) / 600;
 
-    // Background
     ctx.fillStyle = BLACK;
     ctx.fillRect(0, 0, W, H);
 
@@ -539,25 +617,25 @@
     ctx.strokeStyle = BORDER;
     ctx.lineWidth = 0.4;
     for (let x = 0; x <= COLS; x++) {
-      ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x*CELL, 0); ctx.lineTo(x*CELL, H); ctx.stroke();
     }
     for (let y = 0; y <= ROWS; y++) {
-      ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(W, y * CELL); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, y*CELL); ctx.lineTo(W, y*CELL); ctx.stroke();
     }
 
-    // Food — pulsing circle (driven by timestamp for smooth animation)
+    // Food
     const pulse = 0.7 + 0.3 * Math.sin(t * Math.PI * 2);
-    const fr = (CELL / 2 - 3) * pulse;
-    const fx = food.x * CELL + CELL / 2;
-    const fy = food.y * CELL + CELL / 2;
+    const fr = (CELL/2 - 3) * pulse;
+    const fx = food.x * CELL + CELL/2;
+    const fy = food.y * CELL + CELL/2;
 
     const grd = ctx.createRadialGradient(fx, fy, 0, fx, fy, CELL);
     grd.addColorStop(0, 'rgba(146,237,17,0.25)');
     grd.addColorStop(1, 'rgba(146,237,17,0)');
-    ctx.beginPath(); ctx.arc(fx, fy, CELL, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(fx, fy, CELL, 0, Math.PI*2);
     ctx.fillStyle = grd; ctx.fill();
 
-    ctx.beginPath(); ctx.arc(fx, fy, fr, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(fx, fy, fr, 0, Math.PI*2);
     ctx.fillStyle = LIME; ctx.fill();
 
     // Snake
@@ -569,27 +647,23 @@
       const sz = CELL - 2;
 
       if (i === 0) {
-        // Head — full lime
         ctx.fillStyle = LIME;
         ctx.fillRect(px, py, sz, sz);
-
-        // Eyes — positioned based on direction
         ctx.fillStyle = BLACK;
         const e = 3;
         if      (dir.x === 1)  { ctx.fillRect(px+sz-6, py+3, e, e); ctx.fillRect(px+sz-6, py+sz-6, e, e); }
         else if (dir.x === -1) { ctx.fillRect(px+3,    py+3, e, e); ctx.fillRect(px+3,    py+sz-6, e, e); }
-        else if (dir.y === 1)  { ctx.fillRect(px+3,    py+sz-6, e, e); ctx.fillRect(px+sz-6, py+sz-6, e, e); }
-        else                   { ctx.fillRect(px+3,    py+3, e, e); ctx.fillRect(px+sz-6, py+3, e, e); }
+        else if (dir.y === 1)  { ctx.fillRect(px+3, py+sz-6, e, e); ctx.fillRect(px+sz-6, py+sz-6, e, e); }
+        else                   { ctx.fillRect(px+3,    py+3, e, e); ctx.fillRect(px+sz-6, py+3,    e, e); }
       } else {
-        // Body — fades toward tail
         ctx.fillStyle = `rgba(146,237,17,${alpha.toFixed(2)})`;
         const pad = Math.min(Math.round((i / len) * 3), 3);
-        ctx.fillRect(px + pad, py + pad, sz - pad * 2, sz - pad * 2);
+        ctx.fillRect(px+pad, py+pad, sz-pad*2, sz-pad*2);
       }
     });
   }
 
-  // ── UI ────────────────────────────────────────────────────
+  // ── UI ───────────────────────────────────────────────────
   function updateUI() {
     scoreDsp.textContent = score;
     lengthDsp.textContent = snake.length;
@@ -603,7 +677,7 @@
     flashEl.classList.add('go');
   }
 
-  // ── FLOW ──────────────────────────────────────────────────
+  // ── FLOW ─────────────────────────────────────────────────
   function startGame() {
     if (rafId) cancelAnimationFrame(rafId);
     init();
@@ -615,19 +689,23 @@
     rafId = requestAnimationFrame(renderLoop);
   }
 
-  function endGame() {
+  function endGame(reason) {
     running = false;
     cancelAnimationFrame(rafId);
     rafId = null;
     wrap.classList.remove('playing');
 
-    const isNew = score > best;
-    if (isNew) {
-      best = score;
-      localStorage.setItem('mino_snake_best', best);
-      bestDsp.textContent = best;
-    }
+    // Save score to leaderboard
+    const scores = loadScores();
+    const prev   = scores[currentPlayer] || 0;
+    const isNew  = score > prev;
+    saveScore(currentPlayer, score);
+    renderLeaderboard(currentPlayer);
 
+    // Update personal best display
+    bestDsp.textContent = Math.max(score, prev);
+
+    gameOverSub.textContent = reason || 'Game Over';
     finalScr.textContent = score;
     newRec.classList.toggle('show', isNew);
     gameOvl.classList.remove('hidden');
@@ -646,17 +724,14 @@
   function togglePause() {
     if (!running) return;
     paused = !paused;
-    if (!paused) {
-      lastTick = performance.now(); // reset tick timer so no instant skip
-    }
+    if (!paused) lastTick = performance.now();
   }
 
   // ── INPUT ────────────────────────────────────────────────
   const DIR_MAP = {
-    ArrowUp:    {x: 0, y: -1}, ArrowDown:  {x: 0, y: 1},
-    ArrowLeft:  {x: -1, y: 0}, ArrowRight: {x: 1, y: 0},
-    w: {x: 0, y: -1}, s: {x: 0, y: 1},
-    a: {x: -1, y: 0}, d: {x: 1, y: 0},
+    ArrowUp:    {x:0,y:-1}, ArrowDown:  {x:0,y:1},
+    ArrowLeft:  {x:-1,y:0}, ArrowRight: {x:1,y:0},
+    w:{x:0,y:-1}, s:{x:0,y:1}, a:{x:-1,y:0}, d:{x:1,y:0},
   };
 
   document.addEventListener('keydown', e => {
@@ -667,7 +742,6 @@
     if (d.x !== -dir.x || d.y !== -dir.y) nextDir = d;
   });
 
-  // Touch swipe
   let touchStart = null;
   canvas.addEventListener('touchstart', e => {
     touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -691,7 +765,8 @@
   restBtn.addEventListener('click', startGame);
   menuBtn.addEventListener('click', showMenu);
 
-  // ── INIT CANVAS ──────────────────────────────────────────
+  // ── INIT ────────────────────────────────────────────────
+  renderLeaderboard(null);
   ctx.fillStyle = BLACK;
   ctx.fillRect(0, 0, W, H);
 </script>
