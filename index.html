@@ -98,6 +98,56 @@
     .speed-dot { width: 6px; height: 6px; background: var(--border); transition: background 0.3s; }
     .speed-dot.active { background: var(--lime); }
 
+    /* ── AVATAR ─────────────────────────────── */
+    .avatar-card {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.35s, transform 0.35s;
+      pointer-events: none;
+    }
+
+    .avatar-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .avatar-img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--lime);
+      flex-shrink: 0;
+    }
+
+    .avatar-info { overflow: hidden; }
+
+    .avatar-name {
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--lime);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .avatar-label {
+      font-size: 0.58rem;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-top: 2px;
+    }
+
     .lb-card {
       background: var(--dark);
       border: 1px solid var(--border);
@@ -540,6 +590,13 @@
 
     <!-- RIGHT -->
     <div class="sidebar">
+      <div class="avatar-card" id="d-avatar">
+        <img class="avatar-img" id="d-avatar-img" src="" alt="" />
+        <div class="avatar-info">
+          <div class="avatar-name" id="d-avatar-name"></div>
+          <div class="avatar-label">En jeu</div>
+        </div>
+      </div>
       <div class="lb-card">
         <div class="card-label">Leaderboard</div>
         <div id="d-lb"></div>
@@ -658,6 +715,14 @@
   const BORDER = '#2a2d28';
 
   const PLAYERS = ['Aminata', 'Inès', 'Maé', 'Luna', 'Bastien', 'Anatole'];
+  const AVATARS = {
+    'Aminata': 'aminata.png',
+    'Inès':    'ines.png',
+    'Maé':     'mae.png',
+    'Luna':    'luna.png',
+    'Bastien': 'bastien.png',
+    'Anatole': 'anatole.png',
+  };
 
   // ── DETECT LAYOUT ────────────────────────────────────────
   const isMobile = () => window.innerWidth <= 800;
@@ -876,6 +941,18 @@
   }
 
   // ── FLOW ─────────────────────────────────────────────────
+  function showAvatar(name) {
+    const card = document.getElementById('d-avatar');
+    document.getElementById('d-avatar-img').src = AVATARS[name] || '';
+    document.getElementById('d-avatar-img').alt = name;
+    document.getElementById('d-avatar-name').textContent = name;
+    card.classList.add('visible');
+  }
+
+  function hideAvatar() {
+    document.getElementById('d-avatar').classList.remove('visible');
+  }
+
   function startGame() {
     if (rafId) cancelAnimationFrame(rafId);
     setupCanvas();
@@ -887,6 +964,7 @@
     document.getElementById('m-over').classList.add('hidden');
     document.getElementById('d-wrap').classList.add('playing');
     document.getElementById('m-wrap').classList.add('playing');
+    showAvatar(currentPlayer);
     rafId = requestAnimationFrame(renderLoop);
   }
 
@@ -922,6 +1000,7 @@
     document.getElementById('m-over').classList.add('hidden');
     document.getElementById('d-start').classList.remove('hidden');
     document.getElementById('m-start').classList.remove('hidden');
+    hideAvatar();
     setupCanvas();
   }
 
