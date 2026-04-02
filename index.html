@@ -690,19 +690,47 @@
     ctx.fillRect(0, 0, W, H);
   }
 
-  // ── LEADERBOARD ──────────────────────────────────────────
-  function loadScores() {
+  // ── LEADERBOARD (API + localStorage fallback) ────────────
+  let cachedScores = {};
+
+  function lsLoadScores() {
     try { return JSON.parse(localStorage.getItem('mino_lb') || '{}'); } catch { return {}; }
   }
 
-  function saveScore(name, score) {
-    const s = loadScores();
-    if (!s[name] || score > s[name]) s[name] = score;
-    localStorage.setItem('mino_lb', JSON.stringify(s));
+  function lsSaveScore(name, score) {
+    const s = lsLoadScores();
+    if (!s[name] || score > s[name]) { s[name] = score; localStorage.setItem('mino_lb', JSON.stringify(s)); }
   }
 
-  function renderLeaderboard(highlight) {
-    const scores = loadScores();
+  async function fetchScores() {
+    try {
+      const r = await fetch('/api/scores');
+      if (!r.ok) throw new Error();
+      cachedScores = await r.json();
+    } catch {
+      cachedScores = lsLoadScores();
+    }
+    return cachedScores;
+  }
+
+  async function postScore(name, score) {
+    lsSaveScore(name, score); // always save locally too
+    try {
+      const r = await fetch('/api/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, score })
+      });
+      if (!r.ok) throw new Error();
+      cachedScores = await r.json();
+    } catch {
+      cachedScores = lsLoadScores();
+    }
+    return cachedScores;
+  }
+
+  function renderLeaderboard(highlight, scores) {
+    scores = scores || cachedScores;
     const ranked = PLAYERS
       .map(n => ({ name: n, score: scores[n] || 0 }))
       .sort((a, b) => b.score - a.score);
@@ -733,9 +761,9 @@
       currentPlayer = btn.dataset.name;
       document.getElementById('d-startBtn').disabled = false;
       document.getElementById('m-startBtn').disabled = false;
-      const scores = loadScores();
-      document.getElementById('d-best').textContent = scores[currentPlayer] || 0;
-      document.getElementById('m-best').textContent = scores[currentPlayer] || 0;
+      const best = cachedScores[currentPlayer] || 0;
+      document.getElementById('d-best').textContent = best;
+      document.getElementById('m-best').textContent = best;
       renderLeaderboard(currentPlayer);
     });
   }
@@ -868,15 +896,14 @@
     document.getElementById('d-wrap').classList.remove('playing');
     document.getElementById('m-wrap').classList.remove('playing');
 
-    const scores = loadScores();
-    const prev   = scores[currentPlayer] || 0;
-    const isNew  = score > prev;
-    saveScore(currentPlayer, score);
-    renderLeaderboard(currentPlayer);
-
-    const best = Math.max(score, prev);
-    document.getElementById('d-best').textContent = best;
-    document.getElementById('m-best').textContent = best;
+    const prev = cachedScores[currentPlayer] || 0;
+    const isNew = score > prev;
+    postScore(currentPlayer, score).then(newScores => {
+      renderLeaderboard(currentPlayer, newScores);
+      const best = Math.max(score, newScores[currentPlayer] || 0);
+      document.getElementById('d-best').textContent = best;
+      document.getElementById('m-best').textContent = best;
+    });
 
     ['d','m'].forEach(p => {
       document.getElementById(`${p}-reason`).textContent  = reason;
@@ -962,7 +989,7 @@
 
   // ── INIT ─────────────────────────────────────────────────
   setupCanvas();
-  renderLeaderboard(null);
+  fetchScores().then(scores => renderLeaderboard(null, scores));
 </script>
 </body>
 </html>
