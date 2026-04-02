@@ -843,6 +843,10 @@
   setupPlayerGrid('d-players', 'd-startBtn', 'd-best');
   setupPlayerGrid('m-players', 'm-startBtn', 'm-best');
 
+  // ── GOBELIN IMAGE ────────────────────────────────────────
+  const gobelinImg = new Image();
+  gobelinImg.src = 'gobelin.png';
+
   // ── STATE ────────────────────────────────────────────────
   let snake, dir, nextDir, food, score;
   let running  = false;
@@ -903,13 +907,37 @@
     for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x*CELL,0); ctx.lineTo(x*CELL,H); ctx.stroke(); }
     for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0,y*CELL); ctx.lineTo(W,y*CELL); ctx.stroke(); }
 
-    const pulse = 0.7 + 0.3 * Math.sin(t * Math.PI * 2);
-    const fr = (CELL/2 - Math.max(2, CELL*0.15)) * pulse;
+    // Gobelin glow (pulsing)
+    const pulse = 0.6 + 0.4 * Math.sin(t * Math.PI * 2);
+    const glowR = CELL * 0.85 * pulse;
     const fx = food.x * CELL + CELL/2, fy = food.y * CELL + CELL/2;
-    const grd = ctx.createRadialGradient(fx,fy,0,fx,fy,CELL);
-    grd.addColorStop(0,'rgba(146,237,17,0.25)'); grd.addColorStop(1,'rgba(146,237,17,0)');
-    ctx.beginPath(); ctx.arc(fx,fy,CELL,0,Math.PI*2); ctx.fillStyle = grd; ctx.fill();
-    ctx.beginPath(); ctx.arc(fx,fy,fr,0,Math.PI*2); ctx.fillStyle = LIME; ctx.fill();
+
+    // Outer glow
+    const grd = ctx.createRadialGradient(fx, fy, 0, fx, fy, CELL * 1.4);
+    grd.addColorStop(0, `rgba(146,237,17,${(0.35 * pulse).toFixed(2)})`);
+    grd.addColorStop(1, 'rgba(146,237,17,0)');
+    ctx.beginPath(); ctx.arc(fx, fy, CELL * 1.4, 0, Math.PI*2);
+    ctx.fillStyle = grd; ctx.fill();
+
+    // Contour ring
+    ctx.save();
+    ctx.strokeStyle = `rgba(146,237,17,${(0.7 * pulse).toFixed(2)})`;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = LIME;
+    ctx.shadowBlur = 8 * pulse;
+    ctx.beginPath(); ctx.arc(fx, fy, glowR, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+
+    // Gobelin image (scaled to fit cell, slight bob animation)
+    const bob = Math.sin(t * Math.PI * 2) * 2;
+    const imgSize = CELL * 1.1;
+    if (gobelinImg.complete && gobelinImg.naturalWidth > 0) {
+      ctx.drawImage(gobelinImg, fx - imgSize/2, fy - imgSize/2 + bob, imgSize, imgSize);
+    } else {
+      // fallback dot while image loads
+      ctx.beginPath(); ctx.arc(fx, fy, CELL/2 - 2, 0, Math.PI*2);
+      ctx.fillStyle = LIME; ctx.fill();
+    }
 
     const len = snake.length;
     snake.forEach((seg, i) => {
