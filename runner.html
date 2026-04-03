@@ -300,14 +300,13 @@
 <script>
   // ── CONFIG ───────────────────────────────────────────────
   const W = 500, H = 280;
-  const GROUND_Y  = H - 55;
-  const GRAVITY   = 0.55;
-  const JUMP_VEL  = -12.5;
-  const PLAYER_X  = 70;
-  const PLAYER_R  = 20; // avatar circle radius
-  const LIME   = '#92ED11';
-  const BLACK  = '#171915';
-  const BORDER = '#2a2d28';
+  const GROUND_Y = H - 55;
+  const GRAVITY  = 0.55;
+  const JUMP_VEL = -12.5;
+  const PLAYER_X = 72;
+  const PLAYER_R = 20;
+  const LIME  = '#92ED11';
+  const BLACK = '#171915';
 
   const PLAYERS = ['Aminata', 'Inès', 'Maé', 'Luna', 'Bastien', 'Anatole', 'Rebecca'];
   const AVATARS = {
@@ -338,18 +337,239 @@
   canvas.width  = W;
   canvas.height = H;
 
-  // ── AVATAR IMAGE (for canvas drawing) ───────────────────
-  const playerAvImg = new Image();
-  const gobelinImg  = new Image();
+  const gobelinImg = new Image();
   gobelinImg.src = 'gobelin.png';
 
-  // Circular clip helper
-  function drawCircleImage(img, x, y, r) {
+  // ── BACKGROUND GENERATION ────────────────────────────────
+  // Stars
+  const STARS = Array.from({length: 60}, () => ({
+    x: Math.random() * W,
+    y: 8 + Math.random() * (GROUND_Y * 0.68),
+    r: 0.3 + Math.random() * 1.1,
+    a: 0.08 + Math.random() * 0.28,
+  }));
+
+  // Building layers: pre-generate, tiled for infinite scroll
+  function genLayer(n, minW, maxW, minH, maxH) {
+    const list = []; let totalW = 0;
+    for (let i = 0; i < n; i++) {
+      const w = minW + Math.floor(Math.random() * (maxW - minW));
+      const h = minH + Math.floor(Math.random() * (maxH - minH));
+      // pre-bake window positions (flat: [wx,wy, wx,wy, ...])
+      const wins = [];
+      if (h > 22) {
+        for (let wy = 7; wy < h - 5; wy += 10) {
+          for (let wx = 3; wx < w - 2; wx += 7) {
+            if (Math.random() > 0.42) { wins.push(wx); wins.push(wy); }
+          }
+        }
+      }
+      list.push({ x: totalW, w, h, wins });
+      totalW += w + 1 + Math.floor(Math.random() * 6);
+    }
+    return { list, totalW: totalW || 1 };
+  }
+
+  const L_FAR = genLayer(28, 5, 20, 10, 42);
+  const L_MID = genLayer(18, 12, 38, 22, 78);
+
+  let farOff = Math.random() * L_FAR.totalW;
+  let midOff = Math.random() * L_MID.totalW;
+  let gndOff = 0;
+
+  function drawLayer(layer, off, fill, winFill) {
+    const { list, totalW } = layer;
+    const t0 = -(off % totalW);                   // always ≤ 0
+    for (let tx = t0; tx < W; tx += totalW) {
+      ctx.fillStyle = fill;
+      for (const b of list) {
+        const bx = tx + b.x;
+        if (bx + b.w < 0 || bx > W) continue;
+        ctx.fillRect(bx, GROUND_Y - b.h, b.w, b.h);
+      }
+      ctx.fillStyle = winFill;
+      for (const b of list) {
+        const bx = tx + b.x;
+        if (bx + b.w < 0 || bx > W) continue;
+        for (let j = 0; j < b.wins.length; j += 2) {
+          ctx.fillRect(bx + b.wins[j], GROUND_Y - b.h + b.wins[j + 1], 2, 3);
+        }
+      }
+    }
+  }
+
+  function drawBackground() {
+    // Sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    sky.addColorStop(0, '#0d1210');
+    sky.addColorStop(1, '#171915');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, GROUND_Y);
+
+    // Stars
+    for (const s of STARS) {
+      ctx.fillStyle = `rgba(220,235,210,${s.a})`;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Building layers
+    drawLayer(L_FAR, farOff, 'rgba(22,34,18,0.6)', 'rgba(146,237,17,0.035)');
+    drawLayer(L_MID, midOff, 'rgba(14,22,11,0.88)', 'rgba(146,237,17,0.07)');
+
+    // Ground strip
+    ctx.fillStyle = '#171915';
+    ctx.fillRect(0, GROUND_Y, W, H - GROUND_Y);
+
+    // Ground glow line
+    ctx.shadowColor = LIME;
+    ctx.shadowBlur  = 8;
+    ctx.strokeStyle = 'rgba(146,237,17,0.4)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath(); ctx.moveTo(0, GROUND_Y); ctx.lineTo(W, GROUND_Y); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Scrolling dashes on ground
+    ctx.fillStyle = 'rgba(146,237,17,0.1)';
+    const dw = 20, dg = 26;
+    const d0 = -(gndOff % (dw + dg));
+    for (let x = d0; x < W; x += dw + dg) ctx.fillRect(x, GROUND_Y + 5, dw, 2);
+
+    ctx.fillStyle = 'rgba(146,237,17,0.04)';
+    const d0b = -(gndOff * 0.35 % (dw * 2 + dg));
+    for (let x = d0b; x < W; x += dw * 2 + dg) ctx.fillRect(x, GROUND_Y + 12, dw * 2, 1);
+  }
+
+  // ── CRAB DRAWING ─────────────────────────────────────────
+  // Crab origin = player collision center (cx, cy).
+  // Body sits at BY = -10 above that. Legs reach down to +PLAYER_R (+20).
+  function drawCrab(cx, cy, phase, ducking, squishX, squishY) {
     ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(squishX, squishY);
+
+    const BY = -10;   // body center Y relative to origin
+    const BW = 15;    // body half-width
+    const BH = 9;     // body half-height
+
+    // ── LEGS (draw behind body) ──────────────────────────
+    // 3 visible legs on the near side, 2 segments each
+    const legRoots = [-9, 1, 10];  // x along bottom of body
+    for (let i = 0; i < 3; i++) {
+      const ph   = phase * 2.4 + i * 1.1;
+      const sw   = ducking ? 0 : Math.sin(ph) * 4;
+      const rx   = legRoots[i];
+      const ry   = BY + BH;         // attach at body bottom = -1
+      const kx   = rx + (i < 2 ? -5 : 6) + sw * 0.3;
+      const ky   = ry + 9;          // knee
+      const fx   = rx + (i < 2 ? -8 : 9) + sw;
+      const fy   = PLAYER_R - 2;   // feet land just at ground level
+
+      ctx.strokeStyle = '#3d700f';
+      ctx.lineWidth   = 1.9;
+      ctx.lineCap     = 'round';
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(kx, ky);
+      ctx.lineTo(fx, fy);
+      ctx.stroke();
+    }
+
+    // ── BODY (shell) ─────────────────────────────────────
+    ctx.fillStyle = '#182f08';
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.clip();
-    ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+    ctx.ellipse(0, BY, BW, BH, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Shell ridges (arcs across top half)
+    ctx.strokeStyle = '#2d5a0c';
+    ctx.lineWidth = 0.9;
+    for (let r = 0; r < 3; r++) {
+      ctx.beginPath();
+      ctx.ellipse(0, BY + 1, BW * (0.80 - r * 0.22), BH * (0.58 - r * 0.14), 0, Math.PI, 0);
+      ctx.stroke();
+    }
+
+    // Lime outline with glow
+    ctx.shadowColor = LIME;
+    ctx.shadowBlur  = 6;
+    ctx.strokeStyle = LIME;
+    ctx.lineWidth   = 1.2;
+    ctx.globalAlpha = 0.65;
+    ctx.beginPath();
+    ctx.ellipse(0, BY, BW, BH, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur  = 0;
+    ctx.globalAlpha = 1;
+
+    // ── FRONT CLAW (right = toward obstacles) ────────────
+    const cw = Math.sin(phase * 0.7) * 1.8;   // claw waggle
+    ctx.strokeStyle = '#4d8a14';
+    ctx.lineCap = 'round';
+
+    // Arm
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    ctx.moveTo(BW - 1, BY - 1);
+    ctx.lineTo(BW + 9,  BY - 5 + cw);
+    ctx.stroke();
+    // Upper pincer
+    ctx.lineWidth = 1.9;
+    ctx.beginPath();
+    ctx.moveTo(BW + 9, BY - 5 + cw);
+    ctx.lineTo(BW + 17, BY - 12 + cw);
+    ctx.stroke();
+    // Lower pincer
+    ctx.beginPath();
+    ctx.moveTo(BW + 9, BY - 5 + cw);
+    ctx.lineTo(BW + 16, BY + 1 + cw);
+    ctx.stroke();
+
+    // ── BACK CLAW (left, smaller) ─────────────────────────
+    ctx.strokeStyle = '#4d8a14';
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(-BW + 1, BY);
+    ctx.lineTo(-BW - 8,  BY - 3 - cw * 0.4);
+    ctx.stroke();
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(-BW - 8, BY - 3 - cw * 0.4);
+    ctx.lineTo(-BW - 14, BY - 9 - cw * 0.4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-BW - 8, BY - 3 - cw * 0.4);
+    ctx.lineTo(-BW - 13, BY + 2 - cw * 0.4);
+    ctx.stroke();
+
+    // ── EYES ─────────────────────────────────────────────
+    const eb = Math.sin(phase * 2.4) * 0.7;  // eye bob
+
+    // Stalks
+    ctx.strokeStyle = '#4d8a14';
+    ctx.lineWidth = 1.6;
+    ctx.lineCap   = 'round';
+    ctx.beginPath(); ctx.moveTo( 5, BY - BH + 1); ctx.lineTo( 7, BY - BH - 8 + eb); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-3, BY - BH + 1); ctx.lineTo(-5, BY - BH - 7 + eb); ctx.stroke();
+
+    // Eye whites
+    ctx.fillStyle = '#ddeebb';
+    ctx.beginPath(); ctx.arc( 7, BY - BH - 8 + eb, 3.8, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-5, BY - BH - 7 + eb, 3.8, 0, Math.PI * 2); ctx.fill();
+
+    // Pupils (looking right toward danger)
+    ctx.fillStyle = '#0b160b';
+    ctx.beginPath(); ctx.arc( 8.2, BY - BH - 7.5 + eb, 2.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-3.8, BY - BH - 6.5 + eb, 2.1, 0, Math.PI * 2); ctx.fill();
+
+    // Lime shine dot
+    ctx.fillStyle = LIME;
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath(); ctx.arc( 9.2, BY - BH - 9.5 + eb, 1.1, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-2.8, BY - BH - 8.5 + eb, 1.1, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+
     ctx.restore();
   }
 
@@ -359,12 +579,10 @@
   function lsLoad() {
     try { return JSON.parse(localStorage.getItem('mino_runner_lb') || '{}'); } catch { return {}; }
   }
-
   function lsSave(name, score) {
     const s = lsLoad();
     if (!s[name] || score > s[name]) { s[name] = score; localStorage.setItem('mino_runner_lb', JSON.stringify(s)); }
   }
-
   async function fetchScores() {
     try {
       const r = await fetch(`/api/scores?game=${LB_KEY_PARAM}`);
@@ -373,7 +591,6 @@
     } catch { cachedScores = lsLoad(); }
     return cachedScores;
   }
-
   async function postScore(name, score) {
     lsSave(name, score);
     try {
@@ -387,7 +604,6 @@
     } catch { cachedScores = lsLoad(); }
     return cachedScores;
   }
-
   function renderLb(highlight, scores) {
     scores = scores || cachedScores;
     const ranked = PLAYERS
@@ -412,13 +628,12 @@
     btn.classList.add('selected');
     currentPlayer = btn.dataset.name;
     startBtn.disabled = false;
-    playerAvImg.src = AVATARS[currentPlayer];
     bestDsp.textContent = cachedScores[currentPlayer] || 0;
     renderLb(currentPlayer);
   });
 
   // ── GAME STATE ───────────────────────────────────────────
-  let player, obstacles, clouds, score, gameSpeed;
+  let player, obstacles, score, gameSpeed;
   let running = false, rafId = null;
   let frameCount = 0;
   let nextObstacleIn = 60;
@@ -427,62 +642,54 @@
   let jumpPressed = false;
   let dustParticles = [];
 
-  // Scrolling background layers
-  let bgLines = Array.from({length: 20}, (_, i) => ({
-    x: i * (W / 10), y: Math.random() * GROUND_Y * 0.8,
-    speed: 0.3 + Math.random() * 0.5,
-    alpha: 0.04 + Math.random() * 0.06,
-    w: 20 + Math.random() * 60,
-  }));
-
   function initGame() {
     player = {
       x: PLAYER_X,
       y: GROUND_Y - PLAYER_R,
       vy: 0,
       onGround: true,
-      squish: 1,      // vertical squish factor on land
+      squish: 1,
       squishVel: 0,
-      bobAngle: 0,    // running bob
+      bobAngle: 0,
       ducking: false,
     };
-    obstacles      = [];
-    dustParticles  = [];
-    score          = 0;
-    gameSpeed      = 4;
-    frameCount     = 0;
+    obstacles     = [];
+    dustParticles = [];
+    score         = 0;
+    gameSpeed     = 4;
+    frameCount    = 0;
     nextObstacleIn = 80;
     jumpCount      = 0;
     jumpPressed    = false;
+    // Reset bg offsets so city scrolls fresh each run
+    farOff = Math.random() * L_FAR.totalW;
+    midOff = Math.random() * L_MID.totalW;
+    gndOff = 0;
   }
 
   // ── OBSTACLE TYPES ───────────────────────────────────────
   function spawnObstacle() {
-    const roll = Math.random();
+    const roll  = Math.random();
     const speed = gameSpeed;
-
-    if (roll < 0.5) {
-      // Single goblin
-      obstacles.push({ x: W + 10, y: GROUND_Y - 38, w: 32, h: 38, type: 'single', speed });
+    if (roll < 0.50) {
+      obstacles.push({ x: W + 10, y: GROUND_Y - 38, w: 32, h: 38, speed });
     } else if (roll < 0.75) {
-      // Double goblin (jump higher)
-      obstacles.push({ x: W + 10, y: GROUND_Y - 38, w: 32, h: 38, type: 'single', speed });
-      obstacles.push({ x: W + 50, y: GROUND_Y - 38, w: 32, h: 38, type: 'single', speed });
+      obstacles.push({ x: W + 10, y: GROUND_Y - 38, w: 32, h: 38, speed });
+      obstacles.push({ x: W + 52, y: GROUND_Y - 38, w: 32, h: 38, speed });
     } else {
-      // Tall goblin
-      obstacles.push({ x: W + 10, y: GROUND_Y - 56, w: 28, h: 56, type: 'tall', speed });
+      obstacles.push({ x: W + 10, y: GROUND_Y - 56, w: 28, h: 56, speed });
     }
   }
 
   // ── DUST ─────────────────────────────────────────────────
   function spawnDust(x, y) {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       dustParticles.push({
         x, y,
-        vx: (Math.random() - 0.5) * 2,
-        vy: -Math.random() * 1.5,
+        vx: (Math.random() - 0.5) * 2.5,
+        vy: -Math.random() * 2,
         life: 1,
-        r: 1 + Math.random() * 2,
+        r: 1 + Math.random() * 2.5,
       });
     }
   }
@@ -508,25 +715,20 @@
 
   function update() {
     frameCount++;
-    score = Math.floor(frameCount / 6);
-
-    // Speed ramp: +0.001 per frame, cap at 12
+    score     = Math.floor(frameCount / 6);
     gameSpeed = Math.min(12, 4 + frameCount * 0.001);
 
-    // Ducking
     player.ducking = !!(keys['ArrowDown'] || keys['s']);
 
-    // Gravity
+    // Gravity + position
     player.vy += GRAVITY;
     player.y  += player.vy;
 
-    // Ground
     const groundHit = GROUND_Y - (player.ducking ? PLAYER_R * 0.6 : PLAYER_R);
     if (player.y >= groundHit) {
       if (!player.onGround) {
-        // Landing squish
-        player.squish    = 1.4;
-        player.squishVel = -0.08;
+        player.squish    = 1.45;
+        player.squishVel = -0.09;
         spawnDust(player.x, GROUND_Y);
       }
       player.y        = groundHit;
@@ -537,157 +739,95 @@
       player.onGround = false;
     }
 
-    // Squish animation
     player.squish    = Math.max(1, player.squish + player.squishVel);
     player.squishVel *= 0.85;
 
-    // Running bob (only on ground)
-    if (player.onGround && !player.ducking) {
-      player.bobAngle += 0.25;
-    }
+    if (player.onGround && !player.ducking) player.bobAngle += 0.26;
 
-    // Background parallax
-    for (const l of bgLines) {
-      l.x -= l.speed * (gameSpeed / 4);
-      if (l.x + l.w < 0) l.x = W + Math.random() * 50;
-    }
+    // Background scroll
+    farOff += gameSpeed * 0.035;
+    midOff += gameSpeed * 0.17;
+    gndOff += gameSpeed;
 
     // Obstacles
     nextObstacleIn--;
     if (nextObstacleIn <= 0) {
       spawnObstacle();
-      // Gap between obstacles shrinks with speed
       nextObstacleIn = Math.max(40, Math.floor(120 - gameSpeed * 8) + Math.random() * 40);
     }
-
-    obstacles = obstacles.filter(o => {
-      o.x -= o.speed;
-      return o.x + o.w > 0;
-    });
+    obstacles = obstacles.filter(o => { o.x -= o.speed; return o.x + o.w > 0; });
 
     // Dust
     dustParticles = dustParticles.filter(p => {
-      p.x += p.vx; p.y += p.vy; p.life -= 0.06;
+      p.x += p.vx; p.y += p.vy; p.life -= 0.055;
       return p.life > 0;
     });
 
-    // Collision
-    const pr = player.ducking ? PLAYER_R * 0.55 : PLAYER_R * 0.82;
+    // Collision (slightly generous hitbox)
+    const pr = player.ducking ? PLAYER_R * 0.5 : PLAYER_R * 0.78;
     for (const o of obstacles) {
       if (
-        player.x + pr > o.x + 4 &&
-        player.x - pr < o.x + o.w - 4 &&
-        player.y + pr > o.y + 6 &&
+        player.x + pr > o.x + 5 &&
+        player.x - pr < o.x + o.w - 5 &&
+        player.y + pr > o.y + 7 &&
         player.y - pr < o.y + o.h
-      ) {
-        endGame();
-        return;
-      }
+      ) { endGame(); return; }
     }
 
-    // UI
     scoreDsp.textContent = score;
     if (speedDsp) speedDsp.textContent = `×${gameSpeed.toFixed(1)}`;
   }
 
   // ── DRAW ─────────────────────────────────────────────────
   function draw(ts) {
-    ctx.fillStyle = BLACK;
-    ctx.fillRect(0, 0, W, H);
-
-    // Parallax background lines
-    for (const l of bgLines) {
-      ctx.fillStyle = `rgba(42,45,40,${l.alpha})`;
-      ctx.fillRect(l.x, l.y, l.w, 1);
-    }
-
-    // Ground
-    ctx.strokeStyle = `rgba(146,237,17,0.2)`;
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(0, GROUND_Y + 4); ctx.lineTo(W, GROUND_Y + 4); ctx.stroke();
-
-    // Ground texture (scrolling dots)
-    ctx.fillStyle = 'rgba(146,237,17,0.07)';
-    for (let i = 0; i < 30; i++) {
-      const gx = ((i * 20) - (frameCount * gameSpeed * 0.5) % 20 + W * 2) % W;
-      ctx.fillRect(gx, GROUND_Y + 6, 3, 1);
-    }
+    // Background (sky + buildings + ground)
+    drawBackground();
 
     // Dust particles
     for (const p of dustParticles) {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(146,237,17,${(p.life * 0.4).toFixed(2)})`;
+      ctx.fillStyle = `rgba(146,237,17,${(p.life * 0.35).toFixed(2)})`;
       ctx.fill();
     }
 
-    // Obstacles (goblins)
-    const t = ts / 600;
+    // Obstacles (goblins) with bob animation
     for (const o of obstacles) {
-      // Glow
-      const grd = ctx.createRadialGradient(o.x+o.w/2,o.y+o.h/2,0,o.x+o.w/2,o.y+o.h/2,o.w);
-      grd.addColorStop(0,'rgba(146,237,17,0.1)');
-      grd.addColorStop(1,'rgba(146,237,17,0)');
-      ctx.beginPath(); ctx.arc(o.x+o.w/2, o.y+o.h/2, o.w, 0, Math.PI*2);
-      ctx.fillStyle = grd; ctx.fill();
+      const bob = Math.sin(ts * 0.005 + o.x * 0.04) * 2.5;
+
+      // Glow behind goblin
+      const grd = ctx.createRadialGradient(o.x+o.w/2, o.y+o.h/2, 0, o.x+o.w/2, o.y+o.h/2, o.w * 1.2);
+      grd.addColorStop(0, 'rgba(146,237,17,0.12)');
+      grd.addColorStop(1, 'rgba(146,237,17,0)');
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.ellipse(o.x+o.w/2, o.y+o.h/2, o.w, o.h*0.8, 0, 0, Math.PI*2); ctx.fill();
 
       if (gobelinImg.complete && gobelinImg.naturalWidth > 0) {
-        ctx.drawImage(gobelinImg, o.x, o.y, o.w, o.h);
+        ctx.drawImage(gobelinImg, o.x, o.y + bob, o.w, o.h);
       } else {
         ctx.fillStyle = LIME;
-        ctx.fillRect(o.x, o.y, o.w, o.h);
+        ctx.fillRect(o.x, o.y + bob, o.w, o.h);
       }
     }
 
-    // Player avatar
-    const bob    = player.onGround && !player.ducking ? Math.sin(player.bobAngle) * 2.5 : 0;
-    const scaleX = player.ducking ? 1.3 : (2 - player.squish);
-    const scaleY = player.ducking ? 0.6 : player.squish;
-    const drawR  = PLAYER_R;
-    const cx     = player.x;
-    const cy     = player.y + bob;
+    // Player (crab)
+    const bodyBob  = player.onGround && !player.ducking ? Math.sin(player.bobAngle * 2) * 1.8 : 0;
+    const squishX  = player.ducking ? 1.25 : (2 - player.squish);
+    const squishY  = player.ducking ? 0.62 : player.squish;
 
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.scale(scaleX, scaleY);
+    drawCrab(player.x, player.y + bodyBob, player.bobAngle, player.ducking, squishX, squishY);
 
-    // Glow ring
-    ctx.shadowColor = LIME;
-    ctx.shadowBlur  = 10;
-    ctx.strokeStyle = LIME;
-    ctx.lineWidth   = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, drawR + 2, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Avatar image or fallback
-    if (playerAvImg.complete && playerAvImg.naturalWidth > 0) {
-      ctx.beginPath();
-      ctx.arc(0, 0, drawR, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(playerAvImg, -drawR, -drawR, drawR*2, drawR*2);
-    } else {
-      ctx.fillStyle = LIME;
-      ctx.beginPath();
-      ctx.arc(0, 0, drawR, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
-
-    // Score overlay
-    ctx.fillStyle = 'rgba(146,237,17,0.12)';
-    ctx.font = '800 1.8rem Epilogue, sans-serif';
+    // HUD: score (top-right)
+    ctx.font      = '800 1.7rem Epilogue, sans-serif';
+    ctx.fillStyle = 'rgba(146,237,17,0.15)';
     ctx.textAlign = 'right';
-    ctx.fillText(score, W - 16, 36);
+    ctx.fillText(score, W - 14, 34);
     ctx.textAlign = 'left';
 
-    // Speed tag
-    const spd = gameSpeed.toFixed(1);
-    ctx.fillStyle = 'rgba(146,237,17,0.2)';
-    ctx.font = '600 0.65rem Epilogue, sans-serif';
-    ctx.fillText(`×${spd}`, 14, H - 12);
+    // HUD: speed (bottom-left)
+    ctx.font      = '700 0.62rem Epilogue, sans-serif';
+    ctx.fillStyle = 'rgba(146,237,17,0.22)';
+    ctx.fillText(`×${gameSpeed.toFixed(1)}`, 12, H - 10);
   }
 
   // ── FLOW ─────────────────────────────────────────────────
@@ -709,14 +849,12 @@
     running = false;
     cancelAnimationFrame(rafId); rafId = null;
     wrap.classList.remove('playing');
-
     const prev  = cachedScores[currentPlayer] || 0;
     const isNew = score > prev;
     postScore(currentPlayer, score).then(newScores => {
       renderLb(currentPlayer, newScores);
       bestDsp.textContent = Math.max(score, newScores[currentPlayer] || 0);
     });
-
     finalScr.textContent = score;
     newRec.classList.toggle('show', isNew);
     gameOvl.classList.remove('hidden');
@@ -746,25 +884,19 @@
     if (e.key === ' ' || e.key === 'ArrowUp') jumpPressed = false;
   });
 
-  // Touch: tap = jump, swipe down = duck
   let touchY0 = null;
   document.addEventListener('touchstart', e => {
     touchY0 = e.touches[0].clientY;
     if (!jumpPressed) { doJump(); jumpPressed = true; }
   }, {passive:true});
-  document.addEventListener('touchend', e => {
+  document.addEventListener('touchend', () => {
     jumpPressed = false;
     keys['ArrowDown'] = false;
     touchY0 = null;
   }, {passive:true});
   document.addEventListener('touchmove', e => {
-    if (touchY0 !== null && e.touches[0].clientY - touchY0 > 30) {
-      keys['ArrowDown'] = true;
-    }
+    if (touchY0 !== null && e.touches[0].clientY - touchY0 > 30) keys['ArrowDown'] = true;
   }, {passive:true});
-
-  // ── API KV update for runner ────────────────────────────
-  // Update api/scores.js to include runner key (already handled via ?game=runner param)
 
   startBtn.addEventListener('click', startGame);
   restBtn.addEventListener('click',  startGame);
