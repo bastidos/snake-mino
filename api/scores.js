@@ -1,6 +1,6 @@
 const { kv } = require('@vercel/kv');
 
-const KEYS = { snake: 'mino_scores', shooter: 'mino_shooter_scores' };
+const KEYS = { snake: 'mino_scores', shooter: 'mino_shooter_scores', runner: 'mino_runner_scores' };
 const getKey = (req) => KEYS[req.query?.game] || KEYS.snake;
 
 module.exports = async function handler(req, res) {

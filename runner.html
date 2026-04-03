@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RUNNER — Mino</title>
+  <style>
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-ExtraLight.otf'); font-weight: 200; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Light.otf');      font-weight: 300; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Regular.otf');    font-weight: 400; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Medium.otf');     font-weight: 500; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-SemiBold.otf');   font-weight: 600; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Bold.otf');       font-weight: 700; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-ExtraBold.otf');  font-weight: 800; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Black.otf');      font-weight: 900; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --lime:   #92ED11;
+      --black:  #171915;
+      --gray:   #6b6e69;
+      --white:  #eaeaea;
+      --dark:   #1f221d;
+      --border: #2a2d28;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Epilogue', sans-serif;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100vh;
+      padding: 24px 32px;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo img { height: 36px; width: auto; display: block; }
+
+    nav { display: flex; gap: 12px; }
+
+    .nav-link {
+      font-size: 0.68rem; font-weight: 600;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--gray); text-decoration: none;
+      padding: 6px 14px; border: 1px solid var(--border);
+      font-family: 'Epilogue', sans-serif;
+      transition: all 0.15s;
+    }
+    .nav-link:hover { color: var(--white); border-color: var(--gray); }
+    .nav-link.active { color: var(--black); background: var(--lime); border-color: var(--lime); }
+
+    .main {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 36px;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      width: 180px;
+    }
+
+    .card {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+    }
+
+    .card-label {
+      font-size: 0.62rem; font-weight: 600;
+      letter-spacing: 0.3em; text-transform: uppercase;
+      color: var(--gray); margin-bottom: 6px;
+    }
+
+    .card-value {
+      font-family: 'Epilogue', sans-serif;
+      font-size: 2rem; font-weight: 800;
+      color: var(--lime); line-height: 1;
+    }
+    .card-value.small { font-size: 1.3rem; }
+
+    .avatar-card {
+      background: var(--dark);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      opacity: 0; transform: translateY(-6px);
+      transition: opacity 0.35s, transform 0.35s;
+    }
+    .avatar-card.visible { opacity: 1; transform: translateY(0); }
+    .avatar-img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--lime); }
+    .avatar-name { font-family: 'Epilogue', sans-serif; font-size: 0.95rem; font-weight: 800; color: var(--lime); }
+    .avatar-label { font-size: 0.58rem; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; color: var(--gray); margin-top: 2px; }
+
+    .lb-card { background: var(--dark); border: 1px solid var(--border); padding: 18px 20px; flex: 1; }
+
+    .lb-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-rank { font-size: 0.6rem; font-weight: 700; color: var(--gray); width: 18px; }
+    .lb-rank.gold { color: #FFD700; } .lb-rank.silver { color: #C0C0C0; } .lb-rank.bronze { color: #CD7F32; }
+    .lb-name { flex: 1; padding: 0 8px; font-weight: 400; color: var(--white); font-size: 0.78rem; }
+    .lb-row.current-player .lb-name { color: var(--lime); font-weight: 700; }
+    .lb-score { font-family: 'Epilogue', sans-serif; font-weight: 800; font-size: 0.9rem; color: var(--lime); min-width: 28px; text-align: right; }
+    .lb-score.zero { color: var(--gray); font-weight: 400; }
+
+    .canvas-wrap {
+      position: relative; border: 1px solid var(--border); line-height: 0; flex-shrink: 0;
+    }
+    .canvas-wrap::before {
+      content: ''; position: absolute; inset: -1px;
+      border: 1px solid transparent; pointer-events: none; transition: border-color 0.3s;
+    }
+    .canvas-wrap.playing::before { border-color: var(--lime); }
+    canvas { display: block; }
+
+    .overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(10,10,10,0.94); text-align: center; padding: 20px;
+      transition: opacity 0.4s;
+    }
+    .overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .overlay-title {
+      font-family: 'Epilogue', sans-serif; font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; margin-bottom: 6px;
+    }
+    .overlay-title span { color: var(--lime); }
+
+    .overlay-sub {
+      font-size: 0.72rem; font-weight: 300; letter-spacing: 0.18em;
+      text-transform: uppercase; color: var(--gray); margin-bottom: 20px;
+    }
+
+    .player-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 7px; margin-bottom: 18px; width: 100%; max-width: 300px;
+    }
+
+    .player-btn {
+      padding: 10px 4px; background: transparent; border: 1px solid var(--border);
+      color: var(--gray); font-family: 'Epilogue', sans-serif; font-size: 0.75rem;
+      font-weight: 600; cursor: pointer; transition: all 0.15s;
+    }
+    .player-btn:hover { border-color: var(--lime); color: var(--white); }
+    .player-btn.selected { background: var(--lime); border-color: var(--lime); color: var(--black); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 13px 28px; background: var(--lime); color: var(--black);
+      font-family: 'Epilogue', sans-serif; font-size: 0.8rem; font-weight: 800;
+      letter-spacing: 0.2em; text-transform: uppercase; border: none; cursor: pointer;
+      transition: transform 0.15s, opacity 0.2s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.3; cursor: default; }
+    .btn-ghost {
+      background: transparent; color: var(--lime); border: 1px solid var(--lime); margin-top: 8px;
+    }
+
+    .score-result { margin-bottom: 16px; padding: 12px 24px; border: 1px solid var(--border); }
+    .score-result .label { font-size: 0.62rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gray); margin-bottom: 4px; }
+    .score-result .val { font-family: 'Epilogue', sans-serif; font-size: 2.6rem; font-weight: 800; color: var(--lime); line-height: 1; }
+
+    .new-record { font-size: 0.68rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--lime); margin-top: 4px; opacity: 0; transition: opacity 0.4s; }
+    .new-record.show { opacity: 1; }
+
+    footer {
+      display: flex; align-items: center; justify-content: space-between;
+      border-top: 1px solid var(--border); padding-top: 14px;
+    }
+    .footer-text { font-size: 0.65rem; font-weight: 300; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray); }
+    .footer-dot { width: 6px; height: 6px; background: var(--lime); border-radius: 50%; animation: pulse 2s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+    .controls-card { background: var(--dark); border: 1px solid var(--border); padding: 16px 20px; }
+    .key-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; font-size: 0.75rem; color: var(--gray); font-weight: 300; }
+    .key { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 4px; border: 1px solid var(--border); font-family: 'Epilogue', sans-serif; font-size: 0.6rem; font-weight: 700; color: var(--white); background: #1a1a1a; flex-shrink: 0; }
+
+    /* MOBILE */
+    @media (max-width: 800px) {
+      .layout { padding: 12px 16px; gap: 10px; }
+      .sidebar { display: none; }
+      .main { gap: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <header>
+    <div class="logo"><img src="LOGO_MINO_VERT.png" alt="Mino" /></div>
+    <nav>
+      <a href="index.html"   class="nav-link">Snake</a>
+      <a href="shooter.html" class="nav-link">Shooter</a>
+      <a href="runner.html"  class="nav-link active">Runner</a>
+    </nav>
+  </header>
+
+  <div class="main">
+
+    <!-- LEFT -->
+    <div class="sidebar">
+      <div class="card">
+        <div class="card-label">Score</div>
+        <div class="card-value" id="scoreDisplay">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Record</div>
+        <div class="card-value small" id="bestDisplay">0</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Vitesse</div>
+        <div class="card-value small" id="speedDisplay">×1</div>
+      </div>
+    </div>
+
+    <!-- CANVAS -->
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="gameCanvas"></canvas>
+
+      <div class="overlay" id="startOverlay">
+        <div class="overlay-title">RUN<span>NER</span></div>
+        <div class="overlay-sub">Saute par-dessus les gobelins</div>
+        <div class="player-grid" id="playerGrid">
+          <button class="player-btn" data-name="Aminata">Aminata</button>
+          <button class="player-btn" data-name="Inès">Inès</button>
+          <button class="player-btn" data-name="Maé">Maé</button>
+          <button class="player-btn" data-name="Luna">Luna</button>
+          <button class="player-btn" data-name="Bastien">Bastien</button>
+          <button class="player-btn" data-name="Anatole">Anatole</button>
+          <button class="player-btn" data-name="Rebecca" style="grid-column:2">Rebecca</button>
+        </div>
+        <button class="btn" id="startBtn" disabled>Courir →</button>
+      </div>
+
+      <div class="overlay hidden" id="gameOverOverlay">
+        <div class="overlay-title">GAME<span> OVER</span></div>
+        <div class="overlay-sub">Écrasé par un gobelin</div>
+        <div class="score-result">
+          <div class="label">Score final</div>
+          <div class="val" id="finalScore">0</div>
+          <div class="new-record" id="newRecord">★ Nouveau record</div>
+        </div>
+        <button class="btn" id="restartBtn">Rejouer →</button>
+        <button class="btn btn-ghost" id="menuBtn">Menu</button>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="sidebar">
+      <div class="avatar-card" id="avatarCard">
+        <img class="avatar-img" id="avatarImg" src="" alt="" />
+        <div>
+          <div class="avatar-name" id="avatarName"></div>
+          <div class="avatar-label">En course</div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="card-label">Leaderboard</div>
+        <div id="lbList"></div>
+      </div>
+      <div class="controls-card">
+        <div class="card-label" style="margin-bottom:10px">Contrôles</div>
+        <div class="key-row"><div class="key">SPC</div> Sauter</div>
+        <div class="key-row"><div class="key">↑</div> Double saut</div>
+        <div class="key-row"><div class="key">↓</div> Écraser</div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div class="footer-text">© 2026 Mino Creative Studio</div>
+    <div class="footer-dot"></div>
+    <div class="footer-text">All rights reserved</div>
+  </footer>
+
+</div>
+
+<script>
+  // ── CONFIG ───────────────────────────────────────────────
+  const W = 500, H = 280;
+  const GROUND_Y  = H - 55;
+  const GRAVITY   = 0.55;
+  const JUMP_VEL  = -12.5;
+  const PLAYER_X  = 70;
+  const PLAYER_R  = 20; // avatar circle radius
+  const LIME   = '#92ED11';
+  const BLACK  = '#171915';
+  const BORDER = '#2a2d28';
+
+  const PLAYERS = ['Aminata', 'Inès', 'Maé', 'Luna', 'Bastien', 'Anatole', 'Rebecca'];
+  const AVATARS = {
+    'Aminata':'aminata.png','Inès':'ines.png','Maé':'mae.png',
+    'Luna':'luna.png','Bastien':'bastien.png','Anatole':'anatole.png','Rebecca':'rebecca.png',
+  };
+  const LB_KEY_PARAM = 'runner';
+
+  // ── DOM ──────────────────────────────────────────────────
+  const canvas     = document.getElementById('gameCanvas');
+  const ctx        = canvas.getContext('2d');
+  const wrap       = document.getElementById('canvasWrap');
+  const startOvl   = document.getElementById('startOverlay');
+  const gameOvl    = document.getElementById('gameOverOverlay');
+  const startBtn   = document.getElementById('startBtn');
+  const restBtn    = document.getElementById('restartBtn');
+  const menuBtn    = document.getElementById('menuBtn');
+  const scoreDsp   = document.getElementById('scoreDisplay');
+  const bestDsp    = document.getElementById('bestDisplay');
+  const speedDsp   = document.getElementById('speedDisplay');
+  const finalScr   = document.getElementById('finalScore');
+  const newRec     = document.getElementById('newRecord');
+  const lbList     = document.getElementById('lbList');
+  const avatarCard = document.getElementById('avatarCard');
+  const avatarImg  = document.getElementById('avatarImg');
+  const avatarName = document.getElementById('avatarName');
+
+  canvas.width  = W;
+  canvas.height = H;
+
+  // ── AVATAR IMAGE (for canvas drawing) ───────────────────
+  const playerAvImg = new Image();
+  const gobelinImg  = new Image();
+  gobelinImg.src = 'gobelin.png';
+
+  // Circular clip helper
+  function drawCircleImage(img, x, y, r) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+    ctx.restore();
+  }
+
+  // ── LEADERBOARD ──────────────────────────────────────────
+  let cachedScores = {};
+
+  function lsLoad() {
+    try { return JSON.parse(localStorage.getItem('mino_runner_lb') || '{}'); } catch { return {}; }
+  }
+
+  function lsSave(name, score) {
+    const s = lsLoad();
+    if (!s[name] || score > s[name]) { s[name] = score; localStorage.setItem('mino_runner_lb', JSON.stringify(s)); }
+  }
+
+  async function fetchScores() {
+    try {
+      const r = await fetch(`/api/scores?game=${LB_KEY_PARAM}`);
+      if (!r.ok) throw new Error();
+      cachedScores = await r.json();
+    } catch { cachedScores = lsLoad(); }
+    return cachedScores;
+  }
+
+  async function postScore(name, score) {
+    lsSave(name, score);
+    try {
+      const r = await fetch(`/api/scores?game=${LB_KEY_PARAM}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, score })
+      });
+      if (!r.ok) throw new Error();
+      cachedScores = await r.json();
+    } catch { cachedScores = lsLoad(); }
+    return cachedScores;
+  }
+
+  function renderLb(highlight, scores) {
+    scores = scores || cachedScores;
+    const ranked = PLAYERS
+      .map(n => ({ name: n, score: scores[n] || 0 }))
+      .sort((a, b) => b.score - a.score);
+    const medals = ['gold','silver','bronze'];
+    lbList.innerHTML = ranked.map((p, i) => `
+      <div class="lb-row ${p.name === highlight ? 'current-player' : ''}">
+        <span class="lb-rank ${medals[i]||''}">${i+1}</span>
+        <span class="lb-name">${p.name}</span>
+        <span class="lb-score ${p.score===0?'zero':''}">${p.score}</span>
+      </div>`).join('');
+  }
+
+  // ── PLAYER SELECTION ────────────────────────────────────
+  let currentPlayer = null;
+
+  document.getElementById('playerGrid').addEventListener('click', e => {
+    const btn = e.target.closest('.player-btn');
+    if (!btn) return;
+    document.querySelectorAll('.player-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    currentPlayer = btn.dataset.name;
+    startBtn.disabled = false;
+    playerAvImg.src = AVATARS[currentPlayer];
+    bestDsp.textContent = cachedScores[currentPlayer] || 0;
+    renderLb(currentPlayer);
+  });
+
+  // ── GAME STATE ───────────────────────────────────────────
+  let player, obstacles, clouds, score, gameSpeed;
+  let running = false, rafId = null;
+  let frameCount = 0;
+  let nextObstacleIn = 60;
+  let jumpCount = 0;
+  let keys = {};
+  let jumpPressed = false;
+  let dustParticles = [];
+
+  // Scrolling background layers
+  let bgLines = Array.from({length: 20}, (_, i) => ({
+    x: i * (W / 10), y: Math.random() * GROUND_Y * 0.8,
+    speed: 0.3 + Math.random() * 0.5,
+    alpha: 0.04 + Math.random() * 0.06,
+    w: 20 + Math.random() * 60,
+  }));
+
+  function initGame() {
+    player = {
+      x: PLAYER_X,
+      y: GROUND_Y - PLAYER_R,
+      vy: 0,
+      onGround: true,
+      squish: 1,      // vertical squish factor on land
+      squishVel: 0,
+      bobAngle: 0,    // running bob
+      ducking: false,
+    };
+    obstacles      = [];
+    dustParticles  = [];
+    score          = 0;
+    gameSpeed      = 4;
+    frameCount     = 0;
+    nextObstacleIn = 80;
+    jumpCount      = 0;
+    jumpPressed    = false;
+  }
+
+  // ── OBSTACLE TYPES ───────────────────────────────────────
+  function spawnObstacle() {
+    const roll = Math.random();
+    const speed = gameSpeed;
+
+    if (roll < 0.5) {
+      // Single goblin
+      obstacles.push({ x: W + 10, y: GROUND_Y - 38, w: 32, h: 38, type: 'single', speed });
+    } else if (roll < 0.75) {
+      // Double goblin (jump higher)
+      obstacles.push({ x: W + 10, y: GROUND_Y - 38, w: 32, h: 38, type: 'single', speed });
+      obstacles.push({ x: W + 50, y: GROUND_Y - 38, w: 32, h: 38, type: 'single', speed });
+    } else {
+      // Tall goblin
+      obstacles.push({ x: W + 10, y: GROUND_Y - 56, w: 28, h: 56, type: 'tall', speed });
+    }
+  }
+
+  // ── DUST ─────────────────────────────────────────────────
+  function spawnDust(x, y) {
+    for (let i = 0; i < 5; i++) {
+      dustParticles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 2,
+        vy: -Math.random() * 1.5,
+        life: 1,
+        r: 1 + Math.random() * 2,
+      });
+    }
+  }
+
+  // ── JUMP ─────────────────────────────────────────────────
+  function doJump() {
+    if (!running) return;
+    if (jumpCount < 2) {
+      player.vy = jumpCount === 0 ? JUMP_VEL : JUMP_VEL * 0.8;
+      player.onGround = false;
+      jumpCount++;
+      spawnDust(player.x, GROUND_Y);
+    }
+  }
+
+  // ── MAIN LOOP ────────────────────────────────────────────
+  function gameLoop(ts) {
+    if (!running) return;
+    rafId = requestAnimationFrame(gameLoop);
+    update();
+    draw(ts);
+  }
+
+  function update() {
+    frameCount++;
+    score = Math.floor(frameCount / 6);
+
+    // Speed ramp: +0.001 per frame, cap at 12
+    gameSpeed = Math.min(12, 4 + frameCount * 0.001);
+
+    // Ducking
+    player.ducking = !!(keys['ArrowDown'] || keys['s']);
+
+    // Gravity
+    player.vy += GRAVITY;
+    player.y  += player.vy;
+
+    // Ground
+    const groundHit = GROUND_Y - (player.ducking ? PLAYER_R * 0.6 : PLAYER_R);
+    if (player.y >= groundHit) {
+      if (!player.onGround) {
+        // Landing squish
+        player.squish    = 1.4;
+        player.squishVel = -0.08;
+        spawnDust(player.x, GROUND_Y);
+      }
+      player.y        = groundHit;
+      player.vy       = 0;
+      player.onGround = true;
+      jumpCount       = 0;
+    } else {
+      player.onGround = false;
+    }
+
+    // Squish animation
+    player.squish    = Math.max(1, player.squish + player.squishVel);
+    player.squishVel *= 0.85;
+
+    // Running bob (only on ground)
+    if (player.onGround && !player.ducking) {
+      player.bobAngle += 0.25;
+    }
+
+    // Background parallax
+    for (const l of bgLines) {
+      l.x -= l.speed * (gameSpeed / 4);
+      if (l.x + l.w < 0) l.x = W + Math.random() * 50;
+    }
+
+    // Obstacles
+    nextObstacleIn--;
+    if (nextObstacleIn <= 0) {
+      spawnObstacle();
+      // Gap between obstacles shrinks with speed
+      nextObstacleIn = Math.max(40, Math.floor(120 - gameSpeed * 8) + Math.random() * 40);
+    }
+
+    obstacles = obstacles.filter(o => {
+      o.x -= o.speed;
+      return o.x + o.w > 0;
+    });
+
+    // Dust
+    dustParticles = dustParticles.filter(p => {
+      p.x += p.vx; p.y += p.vy; p.life -= 0.06;
+      return p.life > 0;
+    });
+
+    // Collision
+    const pr = player.ducking ? PLAYER_R * 0.55 : PLAYER_R * 0.82;
+    for (const o of obstacles) {
+      if (
+        player.x + pr > o.x + 4 &&
+        player.x - pr < o.x + o.w - 4 &&
+        player.y + pr > o.y + 6 &&
+        player.y - pr < o.y + o.h
+      ) {
+        endGame();
+        return;
+      }
+    }
+
+    // UI
+    scoreDsp.textContent = score;
+    if (speedDsp) speedDsp.textContent = `×${gameSpeed.toFixed(1)}`;
+  }
+
+  // ── DRAW ─────────────────────────────────────────────────
+  function draw(ts) {
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(0, 0, W, H);
+
+    // Parallax background lines
+    for (const l of bgLines) {
+      ctx.fillStyle = `rgba(42,45,40,${l.alpha})`;
+      ctx.fillRect(l.x, l.y, l.w, 1);
+    }
+
+    // Ground
+    ctx.strokeStyle = `rgba(146,237,17,0.2)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, GROUND_Y + 4); ctx.lineTo(W, GROUND_Y + 4); ctx.stroke();
+
+    // Ground texture (scrolling dots)
+    ctx.fillStyle = 'rgba(146,237,17,0.07)';
+    for (let i = 0; i < 30; i++) {
+      const gx = ((i * 20) - (frameCount * gameSpeed * 0.5) % 20 + W * 2) % W;
+      ctx.fillRect(gx, GROUND_Y + 6, 3, 1);
+    }
+
+    // Dust particles
+    for (const p of dustParticles) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(146,237,17,${(p.life * 0.4).toFixed(2)})`;
+      ctx.fill();
+    }
+
+    // Obstacles (goblins)
+    const t = ts / 600;
+    for (const o of obstacles) {
+      // Glow
+      const grd = ctx.createRadialGradient(o.x+o.w/2,o.y+o.h/2,0,o.x+o.w/2,o.y+o.h/2,o.w);
+      grd.addColorStop(0,'rgba(146,237,17,0.1)');
+      grd.addColorStop(1,'rgba(146,237,17,0)');
+      ctx.beginPath(); ctx.arc(o.x+o.w/2, o.y+o.h/2, o.w, 0, Math.PI*2);
+      ctx.fillStyle = grd; ctx.fill();
+
+      if (gobelinImg.complete && gobelinImg.naturalWidth > 0) {
+        ctx.drawImage(gobelinImg, o.x, o.y, o.w, o.h);
+      } else {
+        ctx.fillStyle = LIME;
+        ctx.fillRect(o.x, o.y, o.w, o.h);
+      }
+    }
+
+    // Player avatar
+    const bob    = player.onGround && !player.ducking ? Math.sin(player.bobAngle) * 2.5 : 0;
+    const scaleX = player.ducking ? 1.3 : (2 - player.squish);
+    const scaleY = player.ducking ? 0.6 : player.squish;
+    const drawR  = PLAYER_R;
+    const cx     = player.x;
+    const cy     = player.y + bob;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scaleX, scaleY);
+
+    // Glow ring
+    ctx.shadowColor = LIME;
+    ctx.shadowBlur  = 10;
+    ctx.strokeStyle = LIME;
+    ctx.lineWidth   = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, drawR + 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Avatar image or fallback
+    if (playerAvImg.complete && playerAvImg.naturalWidth > 0) {
+      ctx.beginPath();
+      ctx.arc(0, 0, drawR, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(playerAvImg, -drawR, -drawR, drawR*2, drawR*2);
+    } else {
+      ctx.fillStyle = LIME;
+      ctx.beginPath();
+      ctx.arc(0, 0, drawR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+
+    // Score overlay
+    ctx.fillStyle = 'rgba(146,237,17,0.12)';
+    ctx.font = '800 1.8rem Epilogue, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(score, W - 16, 36);
+    ctx.textAlign = 'left';
+
+    // Speed tag
+    const spd = gameSpeed.toFixed(1);
+    ctx.fillStyle = 'rgba(146,237,17,0.2)';
+    ctx.font = '600 0.65rem Epilogue, sans-serif';
+    ctx.fillText(`×${spd}`, 14, H - 12);
+  }
+
+  // ── FLOW ─────────────────────────────────────────────────
+  function startGame() {
+    if (rafId) cancelAnimationFrame(rafId);
+    initGame();
+    running = true;
+    startOvl.classList.add('hidden');
+    gameOvl.classList.add('hidden');
+    wrap.classList.add('playing');
+    avatarImg.src = AVATARS[currentPlayer];
+    avatarImg.alt = currentPlayer;
+    avatarName.textContent = currentPlayer;
+    avatarCard.classList.add('visible');
+    rafId = requestAnimationFrame(gameLoop);
+  }
+
+  function endGame() {
+    running = false;
+    cancelAnimationFrame(rafId); rafId = null;
+    wrap.classList.remove('playing');
+
+    const prev  = cachedScores[currentPlayer] || 0;
+    const isNew = score > prev;
+    postScore(currentPlayer, score).then(newScores => {
+      renderLb(currentPlayer, newScores);
+      bestDsp.textContent = Math.max(score, newScores[currentPlayer] || 0);
+    });
+
+    finalScr.textContent = score;
+    newRec.classList.toggle('show', isNew);
+    gameOvl.classList.remove('hidden');
+  }
+
+  function showMenu() {
+    running = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    wrap.classList.remove('playing');
+    gameOvl.classList.add('hidden');
+    startOvl.classList.remove('hidden');
+    avatarCard.classList.remove('visible');
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // ── INPUT ────────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if (e.key === ' ' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!jumpPressed) { doJump(); jumpPressed = true; }
+    }
+  });
+  document.addEventListener('keyup', e => {
+    keys[e.key] = false;
+    if (e.key === ' ' || e.key === 'ArrowUp') jumpPressed = false;
+  });
+
+  // Touch: tap = jump, swipe down = duck
+  let touchY0 = null;
+  document.addEventListener('touchstart', e => {
+    touchY0 = e.touches[0].clientY;
+    if (!jumpPressed) { doJump(); jumpPressed = true; }
+  }, {passive:true});
+  document.addEventListener('touchend', e => {
+    jumpPressed = false;
+    keys['ArrowDown'] = false;
+    touchY0 = null;
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if (touchY0 !== null && e.touches[0].clientY - touchY0 > 30) {
+      keys['ArrowDown'] = true;
+    }
+  }, {passive:true});
+
+  // ── API KV update for runner ────────────────────────────
+  // Update api/scores.js to include runner key (already handled via ?game=runner param)
+
+  startBtn.addEventListener('click', startGame);
+  restBtn.addEventListener('click',  startGame);
+  menuBtn.addEventListener('click',  showMenu);
+
+  // ── BOOT ─────────────────────────────────────────────────
+  ctx.fillStyle = BLACK;
+  ctx.fillRect(0, 0, W, H);
+  fetchScores().then(s => renderLb(null, s));
+</script>
+</body>
+</html>
