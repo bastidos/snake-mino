@@ -441,133 +441,126 @@
     for (let x = d0b; x < W; x += dw * 2 + dg) ctx.fillRect(x, GROUND_Y + 12, dw * 2, 1);
   }
 
-  // ── CRAB DRAWING ─────────────────────────────────────────
-  // Crab origin = player collision center (cx, cy).
-  // Body sits at BY = -10 above that. Legs reach down to +PLAYER_R (+20).
-  function drawCrab(cx, cy, phase, ducking, squishX, squishY) {
+  // ── CREATURE DRAWING (pixel-art style) ──────────────────
+  // Origin = player collision center (cx, cy).
+  // Visual: spikes from y=-40 to feet at y=+24 (touches GROUND_Y).
+  function drawCreature(cx, cy, phase, ducking, squishX, squishY) {
     ctx.save();
-    ctx.translate(cx, cy);
+    ctx.translate(Math.round(cx), Math.round(cy));
     ctx.scale(squishX, squishY);
 
-    const BY = -10;   // body center Y relative to origin
-    const BW = 15;    // body half-width
-    const BH = 9;     // body half-height
-
-    // ── LEGS (draw behind body) ──────────────────────────
-    // 3 visible legs on the near side, 2 segments each
-    const legRoots = [-9, 1, 10];  // x along bottom of body
-    for (let i = 0; i < 3; i++) {
-      const ph   = phase * 2.4 + i * 1.1;
-      const sw   = ducking ? 0 : Math.sin(ph) * 4;
-      const rx   = legRoots[i];
-      const ry   = BY + BH;         // attach at body bottom = -1
-      const kx   = rx + (i < 2 ? -5 : 6) + sw * 0.3;
-      const ky   = ry + 9;          // knee
-      const fx   = rx + (i < 2 ? -8 : 9) + sw;
-      const fy   = PLAYER_R - 2;   // feet land just at ground level
-
-      ctx.strokeStyle = '#3d700f';
-      ctx.lineWidth   = 1.9;
-      ctx.lineCap     = 'round';
-      ctx.beginPath();
-      ctx.moveTo(rx, ry);
-      ctx.lineTo(kx, ky);
-      ctx.lineTo(fx, fy);
-      ctx.stroke();
+    const P = 2;  // px per pixel unit
+    function px(x, y, w, h, col) {
+      ctx.fillStyle = col;
+      ctx.fillRect(x * P, y * P, Math.max(P, w * P), Math.max(P, h * P));
     }
 
-    // ── BODY (shell) ─────────────────────────────────────
-    ctx.fillStyle = '#182f08';
-    ctx.beginPath();
-    ctx.ellipse(0, BY, BW, BH, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // Palette (from image)
+    const K  = '#101610';  // dark outline
+    const G  = '#46a034';  // main green
+    const gD = '#2a6420';  // dark green
+    const gL = '#74cc52';  // light green spots
+    const CR = '#d8be76';  // cream/beige (belly, horns)
+    const cL = '#ece4b0';  // light cream (spike tips)
+    const BR = '#6a2e1c';  // brown (pants)
+    const WH = '#e4e0c8';  // off-white (shoes)
+    const YE = '#f0be22';  // yellow (eyes)
+    const TL = '#1c6642';  // tail teal
 
-    // Shell ridges (arcs across top half)
-    ctx.strokeStyle = '#2d5a0c';
-    ctx.lineWidth = 0.9;
-    for (let r = 0; r < 3; r++) {
-      ctx.beginPath();
-      ctx.ellipse(0, BY + 1, BW * (0.80 - r * 0.22), BH * (0.58 - r * 0.14), 0, Math.PI, 0);
-      ctx.stroke();
-    }
+    // Alternating legs while running
+    const lA = ducking ? 0 : Math.sin(phase * 2.6) * 1.8;
+    const lB = -lA;
 
-    // Lime outline with glow
-    ctx.shadowColor = LIME;
-    ctx.shadowBlur  = 6;
-    ctx.strokeStyle = LIME;
-    ctx.lineWidth   = 1.2;
+    // ── BACK ELEMENTS ───────────────────────────────────
+    // Tail (right side, goes up-right)
+    px(7, -7, 2, 2, TL);
+    px(8, -5, 2, 3, TL);
+    px(7, -3, 2, 2, TL);
+    px(8, -2, 1, 1, gD);
+
+    // Left arm (behind body)
+    px(-10, -2, 2, 6, gD);
+
+    // ── BODY OUTLINE (solid bg slightly bigger) ──────────
+    px(-9, -14, 19, 26, K);
+
+    // ── MAIN GREEN BODY ──────────────────────────────────
+    px(-8, -13, 17, 24, G);
+    // Round off top corners
+    px(-8, -13, 2, 1, K);
+    px( 7, -13, 2, 1, K);
+    // Round off bottom corners
+    px(-8,  10, 2, 1, K);
+    px( 7,  10, 1, 1, K);
+    // Side shading
+    px(-8,  -5, 1, 8, gD);
+    px( 8,  -7, 1, 9, gD);
+
+    // ── GREEN SPOTS / TEXTURE ────────────────────────────
+    px(-4, -12, 2, 2, gL);
+    px( 1, -11, 2, 2, gL);
+    px(-1,  -7, 2, 2, gL);
+    px( 3,  -5, 2, 2, gL);
+    px(-5,  -4, 2, 1, gD);
+    px( 4,  -9, 1, 1, gD);
+    px(-2, -10, 1, 1, gD);
+
+    // ── BELLY (cream, lower-center) ───────────────────────
+    px(-5, -4, 10, 11, CR);
+    px(-4, -5,  8,  1, cL);   // lighter top edge
+    px(-6,  0, 12,  5, CR);   // wider mid band
+    px(-4,  7,  8,  1, gD);   // shadow under belly
+
+    // ── BROWN PANTS ──────────────────────────────────────
+    px(-7,  6, 15, 5, BR);
+    px(-6,  5, 13, 2, BR);    // soft upper edge
+
+    // ── LEGS ─────────────────────────────────────────────
+    px(-5 + lA, 10, 3, 3, gD);
+    px( 2 + lB, 10, 3, 3, gD);
+
+    // ── SHOES ────────────────────────────────────────────
+    px(-6 + lA, 12, 5, 2, WH);
+    px( 1 + lB, 12, 5, 2, WH);
+    px(-6 + lA, 13, 5, 1, K);
+    px( 1 + lB, 13, 5, 1, K);
+
+    // ── FRONT RIGHT ARM ──────────────────────────────────
+    px(9,  -2, 2, 7, gD);
+    px(10, -4, 1, 3, gD);
+
+    // ── HEAD TOP ─────────────────────────────────────────
+    px(-6, -14, 13, 2, G);
+    px(-5, -15, 11, 2, G);
+
+    // ── SPIKES / HORNS ───────────────────────────────────
+    // Left spike (leans left)
+    px(-6, -19, 2, 2, cL);
+    px(-5, -18, 2, 2, cL);
+    px(-4, -17, 2, 3, CR);
+    px(-3, -15, 2, 1, CR);
+    // Center spike (tallest)
+    px(-1, -21, 2, 3, cL);
+    px(-1, -19, 2, 4, cL);
+    px(-1, -16, 2, 2, CR);
+    // Right spike
+    px( 3, -18, 2, 2, cL);
+    px( 3, -17, 2, 3, CR);
+    px( 3, -15, 2, 1, CR);
+
+    // ── EYES (prominent yellow rectangles) ───────────────
+    const eY = -11;
+    // Dark sockets
+    px(-6, eY,     4, 3, K);
+    px( 2, eY,     4, 3, K);
+    // Yellow fill
+    px(-5.5, eY + 0.5, 3, 2, YE);
+    px( 2.5, eY + 0.5, 3, 2, YE);
+    // Top glint
+    ctx.fillStyle = '#fffab0';
     ctx.globalAlpha = 0.65;
-    ctx.beginPath();
-    ctx.ellipse(0, BY, BW, BH, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.shadowBlur  = 0;
-    ctx.globalAlpha = 1;
-
-    // ── FRONT CLAW (right = toward obstacles) ────────────
-    const cw = Math.sin(phase * 0.7) * 1.8;   // claw waggle
-    ctx.strokeStyle = '#4d8a14';
-    ctx.lineCap = 'round';
-
-    // Arm
-    ctx.lineWidth = 3.2;
-    ctx.beginPath();
-    ctx.moveTo(BW - 1, BY - 1);
-    ctx.lineTo(BW + 9,  BY - 5 + cw);
-    ctx.stroke();
-    // Upper pincer
-    ctx.lineWidth = 1.9;
-    ctx.beginPath();
-    ctx.moveTo(BW + 9, BY - 5 + cw);
-    ctx.lineTo(BW + 17, BY - 12 + cw);
-    ctx.stroke();
-    // Lower pincer
-    ctx.beginPath();
-    ctx.moveTo(BW + 9, BY - 5 + cw);
-    ctx.lineTo(BW + 16, BY + 1 + cw);
-    ctx.stroke();
-
-    // ── BACK CLAW (left, smaller) ─────────────────────────
-    ctx.strokeStyle = '#4d8a14';
-    ctx.lineWidth = 2.6;
-    ctx.beginPath();
-    ctx.moveTo(-BW + 1, BY);
-    ctx.lineTo(-BW - 8,  BY - 3 - cw * 0.4);
-    ctx.stroke();
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(-BW - 8, BY - 3 - cw * 0.4);
-    ctx.lineTo(-BW - 14, BY - 9 - cw * 0.4);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-BW - 8, BY - 3 - cw * 0.4);
-    ctx.lineTo(-BW - 13, BY + 2 - cw * 0.4);
-    ctx.stroke();
-
-    // ── EYES ─────────────────────────────────────────────
-    const eb = Math.sin(phase * 2.4) * 0.7;  // eye bob
-
-    // Stalks
-    ctx.strokeStyle = '#4d8a14';
-    ctx.lineWidth = 1.6;
-    ctx.lineCap   = 'round';
-    ctx.beginPath(); ctx.moveTo( 5, BY - BH + 1); ctx.lineTo( 7, BY - BH - 8 + eb); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(-3, BY - BH + 1); ctx.lineTo(-5, BY - BH - 7 + eb); ctx.stroke();
-
-    // Eye whites
-    ctx.fillStyle = '#ddeebb';
-    ctx.beginPath(); ctx.arc( 7, BY - BH - 8 + eb, 3.8, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(-5, BY - BH - 7 + eb, 3.8, 0, Math.PI * 2); ctx.fill();
-
-    // Pupils (looking right toward danger)
-    ctx.fillStyle = '#0b160b';
-    ctx.beginPath(); ctx.arc( 8.2, BY - BH - 7.5 + eb, 2.1, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(-3.8, BY - BH - 6.5 + eb, 2.1, 0, Math.PI * 2); ctx.fill();
-
-    // Lime shine dot
-    ctx.fillStyle = LIME;
-    ctx.globalAlpha = 0.55;
-    ctx.beginPath(); ctx.arc( 9.2, BY - BH - 9.5 + eb, 1.1, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(-2.8, BY - BH - 8.5 + eb, 1.1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(-5.5 * P, (eY + 0.5) * P, 1.5 * P, 0.7 * P);
+    ctx.fillRect( 2.5 * P, (eY + 0.5) * P, 1.5 * P, 0.7 * P);
     ctx.globalAlpha = 1;
 
     ctx.restore();
@@ -815,7 +808,7 @@
     const squishX  = player.ducking ? 1.25 : (2 - player.squish);
     const squishY  = player.ducking ? 0.62 : player.squish;
 
-    drawCrab(player.x, player.y + bodyBob, player.bobAngle, player.ducking, squishX, squishY);
+    drawCreature(player.x, player.y + bodyBob, player.bobAngle, player.ducking, squishX, squishY);
 
     // HUD: score (top-right)
     ctx.font      = '800 1.7rem Epilogue, sans-serif';
