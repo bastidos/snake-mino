@@ -1,11 +1,6 @@
-import { NextResponse } from 'next/server';
-
 const TOKEN_NAME = 'mino_token';
 
-// Paths accessible sans authentification
-const PUBLIC = ['/login.html', '/api/auth'];
-// Assets publics nécessaires à la page de login
-const PUBLIC_ASSETS = ['/fonts/', '/LOGO_MINO_VERT.png'];
+const PUBLIC = ['/login.html', '/api/auth', '/fonts/', '/LOGO_MINO_VERT.png'];
 
 async function makeToken(secret) {
   const enc = new TextEncoder();
@@ -17,29 +12,38 @@ async function makeToken(secret) {
   return btoa(String.fromCharCode(...new Uint8Array(sig)));
 }
 
-export async function middleware(req) {
-  const { pathname } = req.nextUrl;
-
-  if (PUBLIC.some(p => pathname === p || pathname.startsWith(p))) {
-    return NextResponse.next();
+function parseCookies(header) {
+  const map = {};
+  if (!header) return map;
+  for (const part of header.split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    map[k.trim()] = v.join('=').trim();
   }
-  if (PUBLIC_ASSETS.some(p => pathname.startsWith(p))) {
-    return NextResponse.next();
+  return map;
+}
+
+export default async function middleware(req) {
+  const url = new URL(req.url);
+  const path = url.pathname;
+
+  if (PUBLIC.some(p => path === p || path.startsWith(p))) {
+    return; // laisser passer
   }
 
   const secret = process.env.MINO_SECRET;
-  if (!secret) return NextResponse.next(); // pas encore configuré → laisse passer
+  if (!secret) return; // pas encore configuré → accès libre
 
-  const cookie = req.cookies.get(TOKEN_NAME)?.value;
+  const cookies  = parseCookies(req.headers.get('cookie'));
+  const token    = cookies[TOKEN_NAME];
   const expected = await makeToken(secret);
 
-  if (cookie === expected) return NextResponse.next();
+  if (token === expected) return; // authentifié
 
   const loginUrl = new URL('/login.html', req.url);
-  loginUrl.searchParams.set('next', pathname);
-  return NextResponse.redirect(loginUrl);
+  loginUrl.searchParams.set('next', path);
+  return Response.redirect(loginUrl.toString(), 302);
 }
 
 export const config = {
-  matcher: ['/((?!_next).*)'],
+  matcher: ['/((?!_next|favicon.ico).*)'],
 };
