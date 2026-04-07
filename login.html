@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MINO — Accès</title>
+  <style>
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-ExtraLight.otf'); font-weight: 200; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Light.otf');      font-weight: 300; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Regular.otf');    font-weight: 400; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Medium.otf');     font-weight: 500; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-SemiBold.otf');   font-weight: 600; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Bold.otf');       font-weight: 700; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-ExtraBold.otf');  font-weight: 800; }
+    @font-face { font-family: 'Epilogue'; src: url('fonts/Epilogue-Black.otf');      font-weight: 900; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --lime:   #92ED11;
+      --black:  #171915;
+      --gray:   #6b6e69;
+      --white:  #eaeaea;
+      --dark:   #1f221d;
+      --border: #2a2d28;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Epilogue', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 360px;
+      padding: 40px 36px;
+      border: 1px solid var(--border);
+      background: var(--dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .logo img { height: 40px; width: auto; display: block; }
+
+    .title-block { text-align: center; }
+    .title {
+      font-size: 1.6rem; font-weight: 800;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      line-height: 1;
+    }
+    .title span { color: var(--lime); }
+    .sub {
+      margin-top: 6px;
+      font-size: 0.68rem; font-weight: 300;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--gray);
+    }
+
+    .form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .field-label {
+      font-size: 0.6rem; font-weight: 600;
+      letter-spacing: 0.28em; text-transform: uppercase;
+      color: var(--gray); margin-bottom: 6px;
+    }
+
+    input[type="password"] {
+      width: 100%;
+      background: var(--black);
+      border: 1px solid var(--border);
+      color: var(--white);
+      font-family: 'Epilogue', sans-serif;
+      font-size: 1rem; font-weight: 400;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.15s;
+      letter-spacing: 0.12em;
+    }
+    input[type="password"]:focus { border-color: var(--lime); }
+    input[type="password"]::placeholder { color: var(--gray); letter-spacing: 0.05em; font-size: 0.85rem; }
+
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--lime);
+      color: var(--black);
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.78rem; font-weight: 800;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      border: none; cursor: pointer;
+      transition: opacity 0.15s, transform 0.12s;
+    }
+    .btn:hover   { opacity: 0.88; }
+    .btn:active  { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+
+    .error {
+      font-size: 0.68rem; font-weight: 600;
+      letter-spacing: 0.18em; text-transform: uppercase;
+      color: #e05555; text-align: center;
+      min-height: 18px;
+      transition: opacity 0.2s;
+    }
+    .error.hidden { opacity: 0; }
+
+    .footer-text {
+      font-size: 0.6rem; font-weight: 300;
+      letter-spacing: 0.2em; text-transform: uppercase;
+      color: var(--gray);
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <div class="logo"><img src="LOGO_MINO_VERT.png" alt="Mino" /></div>
+
+  <div class="title-block">
+    <div class="title">MINO <span>ARCADE</span></div>
+    <div class="sub">Accès privé — Studio</div>
+  </div>
+
+  <form class="form" id="loginForm" autocomplete="off">
+    <div>
+      <div class="field-label">Mot de passe</div>
+      <input type="password" id="pwdInput" placeholder="••••••••" autofocus required />
+    </div>
+    <div class="error hidden" id="errMsg">Mot de passe incorrect</div>
+    <button class="btn" id="loginBtn" type="submit">Entrer →</button>
+  </form>
+
+  <div class="footer-text">© 2026 Mino Creative Studio</div>
+
+</div>
+
+<script>
+  const form    = document.getElementById('loginForm');
+  const input   = document.getElementById('pwdInput');
+  const btn     = document.getElementById('loginBtn');
+  const errMsg  = document.getElementById('errMsg');
+
+  const next = new URLSearchParams(location.search).get('next') || '/index.html';
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    errMsg.classList.add('hidden');
+    btn.disabled = true;
+    btn.textContent = '…';
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: input.value }),
+      });
+
+      if (res.ok) {
+        location.href = next;
+      } else {
+        errMsg.classList.remove('hidden');
+        input.value = '';
+        input.focus();
+      }
+    } catch {
+      errMsg.textContent = 'Erreur réseau';
+      errMsg.classList.remove('hidden');
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Entrer →';
+  });
+</script>
+
+</body>
+</html>
