@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
   }
 
   const token = makeToken(secret);
-  const maxAge = 60 * 60 * 24 * 30; // 30 jours
+  const maxAge = 60 * 60 * 24; // 1 jour
 
   res.setHeader('Set-Cookie',
     `mino_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${maxAge}`
